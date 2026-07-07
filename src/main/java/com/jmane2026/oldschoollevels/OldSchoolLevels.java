@@ -10,6 +10,6 @@ public class OldSchoolLevels {
     public static final String MODID = "oldschoollevels";
 
     public OldSchoolLevels(IEventBus modEventBus, ModContainer modContainer) {
-        NeoForge.EVENT_BUS.register(this);
+
     }
 }
