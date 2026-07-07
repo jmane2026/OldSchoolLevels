@@ -1,5 +1,6 @@
 package com.jmane2026.oldschoollevels.common;
 
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.network.chat.Component;
@@ -19,12 +20,12 @@ public enum Skill {
     COOKING("Cooking", Items.BREAD, 0);
 
     private final String displayName;
-    private final ItemStack icon;
+    private final Item item;
     private final long defaultXp;
 
-    Skill(String displayName, ItemLike item, long defaultXp) {
+    Skill(String displayName, Item item, long defaultXp) {
         this.displayName = displayName;
-        this.icon = new ItemStack(item);
+        this.item = item;
         this.defaultXp = defaultXp;
     }
 
@@ -33,7 +34,7 @@ public enum Skill {
     }
 
     public ItemStack getIcon() {
-        return icon;
+        return new ItemStack(this.item);
     }
 
     public Component getNameComponent() {

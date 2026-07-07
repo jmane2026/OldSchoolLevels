@@ -2,7 +2,10 @@ package com.jmane2026.oldschoollevels.client.gui;
 
 import com.jmane2026.oldschoollevels.OldSchoolLevelsClient;
 import com.jmane2026.oldschoollevels.common.Skill;
+import com.jmane2026.oldschoollevels.common.SkillData;
+import com.jmane2026.oldschoollevels.core.ModAttachments;
 import com.jmane2026.oldschoollevels.util.ExperienceUtils;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
@@ -63,6 +66,11 @@ public class LevelScreen extends Screen {
         int atk = 1, def = 1, str = 1, hp = 10, range = 1;
         double pray = 1, mage = 1; // Not in list yet, but part of formula
 
+        // Fetch the player's real skill data from Attachments
+        SkillData skillData = Minecraft.getInstance().player != null 
+                ? Minecraft.getInstance().player.getData(ModAttachments.SKILLS) 
+                : SkillData.EMPTY;
+
         Skill[] skills = Skill.values();
         for (int i = 0; i < skills.length; i++) {
             Skill skill = skills[i];
@@ -75,7 +83,8 @@ public class LevelScreen extends Screen {
             graphics.fill(bx, by, bx + BOX_SIZE, by + BOX_SIZE, 0x44FFFFFF);
             graphics.outline(bx, by, BOX_SIZE, BOX_SIZE, 0x88FFFFFF);
 
-            int level = ExperienceUtils.getLevelAtExperience(skill.getDefaultXp());
+            long currentXp = skillData.getExperience(skill);
+            int level = ExperienceUtils.getLevelAtExperience(currentXp);
             totalLevel += level;
             
             // Track combat stats for the summary
@@ -132,7 +141,7 @@ public class LevelScreen extends Screen {
 
         // Tooltip Rendering
         if (hoveredSkill != null) {
-            long xp = hoveredSkill.getDefaultXp();
+            long xp = skillData.getExperience(hoveredSkill);
             int lvl = ExperienceUtils.getLevelAtExperience(xp);
             long toNext = ExperienceUtils.getXpToNextLevel(xp);
             
