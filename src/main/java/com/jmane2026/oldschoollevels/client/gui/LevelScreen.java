@@ -7,12 +7,15 @@ import com.jmane2026.oldschoollevels.core.ModAttachments;
 import com.jmane2026.oldschoollevels.util.ExperienceUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
 import net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner;
 import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
-import org.joml.Matrix3x2f;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
 
@@ -33,12 +36,22 @@ public class LevelScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(KeyEvent event) {
-        if (OldSchoolLevelsClient.LEVEL_SCREEN_KEY.matches(event)) {
-            this.onClose();
-            return true;
+    protected void init() {
+        super.init();
+        int x = this.width - PANEL_WIDTH - MARGIN;
+        int y = this.height - PANEL_HEIGHT - MARGIN;
+
+        // Small "X" button in the top right corner
+        this.addRenderableWidget(Button.builder(Component.literal("X"), (btn) -> this.onClose())
+                .bounds(x + PANEL_WIDTH - 18, y + 2, 14, 14)
+                .build());
+    }
+
+    @Override
+    public void onClose() {
+        if (this.minecraft != null && this.minecraft.player != null) {
+            this.minecraft.setScreen(new InventoryScreen(this.minecraft.player));
         }
-        return super.keyPressed(event);
     }
 
     @Override
@@ -144,13 +157,15 @@ public class LevelScreen extends Screen {
             long xp = skillData.getExperience(hoveredSkill);
             int lvl = ExperienceUtils.getLevelAtExperience(xp);
             long toNext = ExperienceUtils.getXpToNextLevel(xp);
+            boolean clickable = hoveredSkill != Skill.STRENGTH && hoveredSkill != Skill.LIFE;
             
             graphics.tooltip(
                     this.font,
                     List.of(
                         ClientTooltipComponent.create(Component.literal(hoveredSkill.getDisplayName() + ": " + lvl + "/99").getVisualOrderText()),
                         ClientTooltipComponent.create(Component.literal("Current Exp: " + xp).getVisualOrderText()),
-                        ClientTooltipComponent.create(Component.literal("Exp to Level: " + (lvl >= 99 ? "MAX" : toNext)).getVisualOrderText())
+                        ClientTooltipComponent.create(Component.literal("Exp to Level: " + (lvl >= 99 ? "MAX" : toNext)).getVisualOrderText()),
+                        ClientTooltipComponent.create(Component.literal(clickable ? "§eClick to view Unlocks" : "§7No Unlocks to display").getVisualOrderText())
                     ),
                     mouseX,
                     mouseY,
@@ -158,5 +173,45 @@ public class LevelScreen extends Screen {
                     null
             );
         }
+    }
+
+    @Override
+    public boolean keyPressed(KeyEvent event) {
+        // Allow closing the screen with standard inventory key (E) or Escape
+        if (event.key() == GLFW.GLFW_KEY_E || event.key() == GLFW.GLFW_KEY_ESCAPE) {
+            this.onClose();
+            return true;
+        }
+        return super.keyPressed(event);
+    }
+
+    @Override
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClicked) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+
+        int x = this.width - PANEL_WIDTH - MARGIN;
+        int y = this.height - PANEL_HEIGHT - MARGIN;
+        int startX = x + 8;
+        int startY = y + 18;
+
+        Skill[] skills = Skill.values();
+        for (int i = 0; i < skills.length; i++) {
+            int col = i % 3;
+            int row = i / 3;
+            int bx = startX + (col * (BOX_SIZE + SPACING));
+            int by = startY + (row * (BOX_SIZE + SPACING));
+
+            // Check if the click is within the current skill box bounds
+            if (mouseX >= bx && mouseX <= bx + BOX_SIZE && mouseY >= by && mouseY <= by + BOX_SIZE) {
+                Skill selected = skills[i];
+                if (selected == Skill.STRENGTH || selected == Skill.LIFE) return false;
+
+                this.minecraft.setScreen(new SkillUnlocksScreen(skills[i], this));
+                return true;
+            }
+        }
+
+        return super.mouseClicked(event, doubleClicked);
     }
 }

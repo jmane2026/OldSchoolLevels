@@ -45,11 +45,11 @@ public class XpNotificationOverlay {
             }
         }
 
-        // Calculate stagger based on how many drops were added in the last few ticks
-        int stagger = 0;
-        for (XpDrop drop : ACTIVE_DROPS) {
-            if (drop.ticks > MAX_TICKS - 5) stagger++;
-        }
+        // Find the highest stagger currently in the list and add 1
+        int stagger = ACTIVE_DROPS.stream()
+                .mapToInt(d -> d.stagger)
+                .max()
+                .orElse(-1) + 1;
 
         ACTIVE_DROPS.add(new XpDrop(skill, amount, stagger));
 
@@ -125,7 +125,7 @@ public class XpNotificationOverlay {
         // Scrolling XP Text
         float scrollProgress = 1.0f - (((float) drop.ticks - partialTick) / (float) MAX_TICKS);
         // Start 10 pixels above the box and stack upwards by subtracting the stagger
-        float scrollY = (float) y - 10f - (scrollProgress * 50f) - (drop.stagger * 12f);
+        float scrollY = (float) y - 12f - (scrollProgress * 50f) - (drop.stagger * 12f);
 
         graphics.pose().pushMatrix();
         graphics.pose().translate((float) x + 5f, scrollY, graphics.pose());

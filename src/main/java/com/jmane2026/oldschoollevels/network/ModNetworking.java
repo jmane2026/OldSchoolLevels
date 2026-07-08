@@ -1,6 +1,7 @@
 package com.jmane2026.oldschoollevels.network;
 
 import com.jmane2026.oldschoollevels.OldSchoolLevels;
+import com.jmane2026.oldschoollevels.client.gui.DamageIndicatorManager;
 import com.jmane2026.oldschoollevels.client.gui.XpNotificationOverlay;
 import com.jmane2026.oldschoollevels.common.SkillAttributeHandler;
 import com.jmane2026.oldschoollevels.core.ModAttachments;
@@ -14,13 +15,25 @@ public class ModNetworking {
     @SubscribeEvent
     public static void register(final RegisterPayloadHandlersEvent event) {
         final PayloadRegistrar registrar = event.registrar(OldSchoolLevels.MODID);
-        
+
         registrar.playToClient(
                 XpGainPayload.TYPE,
                 XpGainPayload.STREAM_CODEC,
                 (payload, context) -> {
                     context.enqueueWork(() -> {
                         XpNotificationOverlay.notify(payload.skill(), payload.amount(), payload.totalXp());
+                    });
+                }
+        );
+
+        registrar.playToClient(
+                DamageNumberPayload.TYPE,
+                DamageNumberPayload.STREAM_CODEC,
+                (payload, context) -> {
+                    context.enqueueWork(() -> {
+                        DamageIndicatorManager.add(
+                                payload.x(), payload.y(), payload.z(), payload.amount()
+                        );
                     });
                 }
         );
