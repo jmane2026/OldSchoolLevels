@@ -30,19 +30,16 @@ import net.neoforged.neoforge.network.PacketDistributor;
 public class LevelingHandler {
 
     private static final float BASE_CRIT_CHANCE = 0.05f; // 5% chance
-    // Temporary storage to track if the current hit is a critical
-    private static boolean lastHitWasCritical = false;
 
     @SubscribeEvent
     public static void onIncomingDamage(LivingIncomingDamageEvent event) {
         // Handle Critical Hits for Players
         if (event.getSource().getEntity() instanceof ServerPlayer player) {
-            if (player.getRandom().nextFloat() < BASE_CRIT_CHANCE) {
+            boolean isCrit = player.getRandom().nextFloat() < BASE_CRIT_CHANCE;
+            if (isCrit) {
                 event.setAmount(event.getAmount() * 2);
-                lastHitWasCritical = true;
-            } else {
-                lastHitWasCritical = false;
             }
+            player.setData(ModAttachments.IS_CRITICAL, isCrit);
         }
     }
 
@@ -135,13 +132,15 @@ public class LevelingHandler {
 
             if (damage <= 0) return;
 
-            // Send Damage Splat packet (isCritical = tracked, isIncoming = false)
+            boolean wasCrit = player.getData(ModAttachments.IS_CRITICAL);
+
+            // Send Damage Splat packet (isIncoming = false)
             PacketDistributor.sendToPlayer(player, new DamageNumberPayload(
                     event.getEntity().getX(), event.getEntity().getY(), event.getEntity().getZ(), 
-                    damage, lastHitWasCritical, false
+                    damage, wasCrit, false
             ));
             
-            lastHitWasCritical = false; // Reset flag
+            player.setData(ModAttachments.IS_CRITICAL, false); // Reset flag
 
             // OSRS Scale: ~4 XP per 1 damage point (scaled to MC hearts)
             long combatXp = Math.round(damage * 4);

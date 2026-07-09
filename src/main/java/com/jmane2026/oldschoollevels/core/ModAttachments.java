@@ -30,4 +30,9 @@ public class ModAttachments {
                     .copyOnDeath()
                     .build()
     );
+
+    public static final Supplier<AttachmentType<Boolean>> IS_CRITICAL = ATTACHMENT_TYPES.register(
+            "is_critical",
+            () -> AttachmentType.builder(() -> false).build()
+    );
 }
