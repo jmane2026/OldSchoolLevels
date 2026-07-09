@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "L": "minecraft:acacia_log",
+    "K": "#oldschoollevels:knives",
+    "S": "minecraft:string"
+  },
+  "pattern": [
+    " LS",
+    "LKS",
+    " LS"
+  ],
+  "result": {
+    "count": 1,
+    "id": "oldschoollevels:acacia_bow"
+  }
+}

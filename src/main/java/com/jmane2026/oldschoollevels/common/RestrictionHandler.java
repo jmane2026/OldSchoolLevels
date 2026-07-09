@@ -7,9 +7,11 @@ import com.jmane2026.oldschoollevels.util.ExperienceUtils;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.*;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
@@ -22,10 +24,12 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingEquipmentChangeEvent;
+import net.neoforged.neoforge.event.entity.living.LivingGetProjectileEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.ItemFishedEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.entity.player.ArrowLooseEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
 import java.util.ArrayList;
@@ -132,7 +136,7 @@ public class RestrictionHandler {
         // Ranged Requirement Check
         int rangedLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.RANGED));
         int reqRanged = RequirementUtils.getRequiredRangedLevel(held);
-        if (rangedLvl < reqRanged) {
+        if (rangedLvl < reqRanged && heldPath.contains("_bow")) {
             WarningOverlay.showWarning("Requires Level " + reqRanged + " Ranged");
             event.setCanceled(true);
         }
@@ -147,17 +151,20 @@ public class RestrictionHandler {
 
         int defLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.DEFENSE));
         int atkLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.ATTACK));
+        int rangedLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.RANGED));
         int miningLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MINING));
         int wcLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.WOODCUTTING));
 
         int reqDef = RequirementUtils.getRequiredDefenseLevel(stack);
         int reqAtk = RequirementUtils.getRequiredAttackLevel(stack);
+        int reqRanged = RequirementUtils.getRequiredRangedLevel(stack);
         String path = BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath();
 
         List<String> missing = new ArrayList<>();
         
         if (atkLvl < reqAtk) missing.add("Lvl " + reqAtk + " Attack");
         if (defLvl < reqDef) missing.add("Lvl " + reqDef + " Defense");
+        if (rangedLvl < reqRanged && path.contains("_bow")) missing.add("Lvl " + reqRanged + " Ranged");
 
         // Dual Requirement for Tools (Checking corresponding skill against the tool's tier)
         if (path.contains("pickaxe") && miningLvl < reqAtk) {
@@ -176,6 +183,63 @@ public class RestrictionHandler {
             }
             // Clear the slot so they aren't wearing/holding it
             player.getItemBySlot(slot).setCount(0);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onGetProjectile(LivingGetProjectileEvent event) {
+        if (!(event.getEntity() instanceof Player player)) return;
+
+        SkillData data = player.getData(ModAttachments.SKILLS.get());
+        int rangedLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.RANGED));
+
+        // We scan for the "Best" arrow that the player actually has the level for.
+        // Priority: Highest Tier Usable
+        ItemStack bestUsable = ItemStack.EMPTY;
+        float bestDmg = -1;
+
+        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+            ItemStack stack = player.getInventory().getItem(i);
+
+            // Check if item is in the arrows tag
+            if (stack.is(ItemTags.ARROWS)) {
+                int req = RequirementUtils.getRequiredRangedLevel(stack);
+
+                // If the player meets the requirement, check if it's better than our current choice
+                if (rangedLvl >= req) {
+                    String path = BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath();
+                    float dmg = RequirementUtils.getArrowDamage(path);
+
+                    if (dmg > bestDmg) {
+                        bestDmg = dmg;
+                        bestUsable = stack;
+                    }
+                }
+            }
+        }
+
+        // If we found a valid arrow that is different from what vanilla picked,
+        // we override the projectile selection.
+        if (!bestUsable.isEmpty()) {
+            event.setProjectileItemStack(bestUsable);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onArrowLoose(ArrowLooseEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        
+        // Find the ammo the player is actually about to fire
+        ItemStack ammo = player.getProjectile(event.getBow());
+        if (ammo.isEmpty()) return;
+
+        SkillData data = player.getData(ModAttachments.SKILLS.get());
+        int rangedLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.RANGED));
+        int reqRanged = RequirementUtils.getRequiredRangedLevel(ammo);
+
+        if (rangedLvl < reqRanged) {
+            WarningOverlay.showWarning("Requires Level " + reqRanged + " Ranged to use these arrows");
+            event.setCanceled(true);
         }
     }
 
@@ -225,6 +289,7 @@ public class RestrictionHandler {
         SkillData data = player.getData(ModAttachments.SKILLS.get());
         int smithLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.SMITHING));
         int cookLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.COOKING));
+        int fletchLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.FLETCHING));
 
         // Handle Furnace logic to prevent fuel waste and stop restricted smelting
         if (menu instanceof AbstractFurnaceMenu furnace) {
@@ -275,9 +340,14 @@ public class RestrictionHandler {
             ItemStack stack = slot.getItem();
             if (stack.isEmpty()) continue;
 
-            // Handle Result Slots for Crafting Tables and other machines
+            int reqSmith = RequirementUtils.getRequiredSmithingLevel(stack);
+            int reqCook = RequirementUtils.getRequiredCookingLevel(stack);
+            int reqFletch = RequirementUtils.getRequiredFletchingLevel(stack);
+            
+            String path = BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath();
+            boolean isFletchingItem = path.contains("_knife") || path.contains("_bow") || path.contains("_arrow") || path.contains("_heads") || stack.is(Items.STICK);
             boolean isResult = slot instanceof ResultSlot || slot.container instanceof ResultContainer;
-            if (isResult && (smithLvl < RequirementUtils.getRequiredSmithingLevel(stack) || cookLvl < RequirementUtils.getRequiredCookingLevel(stack))) {
+            if (isResult && (smithLvl < reqSmith || cookLvl < reqCook || (isFletchingItem && fletchLvl < reqFletch))) {
                 slot.set(ItemStack.EMPTY);
                 menu.broadcastChanges();
 

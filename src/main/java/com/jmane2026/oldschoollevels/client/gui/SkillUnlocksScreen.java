@@ -75,7 +75,7 @@ public class SkillUnlocksScreen extends Screen {
         List<RequirementUtils.UnlockInfo> unlocks = RequirementUtils.getUnlocksForSkill(skill);
         int yPos = startY + 30;
 
-        // Render visible items based on scroll offset
+        // Render visible item based on scroll offset
         for (int i = 0; i < VISIBLE_ITEMS; i++) {
             int idx = i + scrollOffset;
             if (idx >= unlocks.size()) break;

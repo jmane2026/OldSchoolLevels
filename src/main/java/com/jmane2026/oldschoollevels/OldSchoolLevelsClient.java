@@ -1,11 +1,9 @@
 package com.jmane2026.oldschoollevels;
 
 import com.jmane2026.oldschoollevels.client.gui.DamageIndicatorManager;
-import com.jmane2026.oldschoollevels.client.gui.LevelScreen;
 import com.jmane2026.oldschoollevels.client.gui.WarningOverlay;
 import com.jmane2026.oldschoollevels.client.gui.XpNotificationOverlay;
 import net.minecraft.client.Minecraft;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;

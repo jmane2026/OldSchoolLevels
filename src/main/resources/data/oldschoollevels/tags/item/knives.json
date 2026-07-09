@@ -1,0 +1,12 @@
+{
+  "replace": false,
+  "values": [
+    "oldschoollevels:flint_knife",
+    "oldschoollevels:copper_knife",
+    "oldschoollevels:iron_knife",
+    "oldschoollevels:golden_knife",
+    "oldschoollevels:diamond_knife",
+    "oldschoollevels:emerald_knife",
+    "oldschoollevels:netherite_knife"
+  ]
+}

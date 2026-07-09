@@ -1,8 +1,11 @@
 package com.jmane2026.oldschoollevels.common;
 
+import com.jmane2026.oldschoollevels.core.ModItems;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 
@@ -48,7 +51,7 @@ public class RequirementUtils {
 
     public static int getRequiredAttackLevel(ItemStack stack) {
         String path = BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath();
-        if (!isTool(path) && !path.contains("sword")) return 1;
+        if (!isTool(path) && !path.contains("sword") && !path.contains("_knife")) return 1;
 
         if (path.contains("copper")) return 5;
         if (path.contains("iron")) return 15;
@@ -67,7 +70,7 @@ public class RequirementUtils {
         if (stack.is(Items.RAW_GOLD) || stack.is(Items.GOLD_INGOT)) return 40;
         if (stack.is(Items.NETHERITE_SCRAP)) return 85;
 
-        // Handle Ores that smelt into items (like Iron Ore block)
+        // Handle Ores that smelt into item (like Iron Ore block)
         if (path.contains("iron_ore")) return 15;
         if (path.contains("gold_ore")) return 40;
 
@@ -92,13 +95,59 @@ public class RequirementUtils {
         if (path.contains("cherry_bow")) return 85;
 
         // Arrow Tiers
+        if (path.contains("flint_arrow")) return 1;
         if (path.contains("copper_arrow")) return 5;
         if (path.contains("iron_arrow")) return 15;
         if (path.contains("golden_arrow")) return 40;
-        if (path.contains("diamond_arrow")) return 65;
+        if (path.contains("diamond_arrow")) return 55;
+        if (path.contains("emerald_arrow")) return 65;
         if (path.contains("netherite_arrow")) return 85;
 
         return 1;
+    }
+
+    public static int getRequiredFletchingLevel(ItemStack stack) {
+        String path = BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath();
+
+        // Knives & Heads
+        if (path.contains("flint")) return 1;
+        if (path.contains("copper")) return 5;
+        if (path.contains("iron")) return 15;
+        if (path.contains("golden")) return 40;
+        if (path.contains("diamond")) return 55;
+        if (path.contains("emerald")) return 65;
+        if (path.contains("netherite")) return 85;
+
+        // Bows (Log Tiers)
+        if (path.contains("oak")) return 1;
+        if (path.contains("spruce") || path.contains("birch")) return 15;
+        if (path.contains("jungle")) return 30;
+        if (path.contains("acacia")) return 45;
+        if (path.contains("dark_oak")) return 60;
+        if (path.contains("mangrove")) return 75;
+        if (path.contains("cherry")) return 85;
+
+        return 1;
+    }
+
+    public static float getArrowDamage(String path) {
+        if (path.contains("netherite")) return 5.0f;
+        if (path.contains("emerald")) return 4.0f;
+        if (path.contains("diamond")) return 3.5f;
+        if (path.contains("golden")) return 2.5f;
+        if (path.contains("iron")) return 2.0f;
+        if (path.contains("copper")) return 1.5f;
+        return 1.0f; // Flint/Standard
+    }
+
+    public static float getBowDamageBonus(String path) {
+        if (path.contains("cherry")) return 3.0f;
+        if (path.contains("mangrove")) return 2.5f;
+        if (path.contains("dark_oak")) return 2.0f;
+        if (path.contains("acacia")) return 1.5f;
+        if (path.contains("jungle")) return 1.0f;
+        if (path.contains("spruce") || path.contains("birch")) return 0.5f;
+        return 0.0f; // Oak (Uses vanilla baseline)
     }
 
     public static int getRequiredCookingLevel(ItemStack stack) {
@@ -118,6 +167,28 @@ public class RequirementUtils {
 
     private static boolean isTool(String path) {
         return path.contains("pickaxe") || path.contains("axe") || path.contains("shovel") || path.contains("hoe");
+    }
+
+    public static float getKnifeDamage(String path) {
+        if (path.contains("netherite")) return 5.0f;
+        if (path.contains("diamond")) return 4.0f;
+        if (path.contains("emerald")) return 3.5f;
+        if (path.contains("golden")) return 1.5f;
+        if (path.contains("iron")) return 3.0f;
+        if (path.contains("copper")) return 2.5f;
+        if (path.contains("flint")) return 2.0f;
+        return 1.0f;
+    }
+
+    public static float getKnifeSpeed(String path) {
+        if (path.contains("netherite")) return 3.0f;
+        if (path.contains("diamond")) return 2.8f;
+        if (path.contains("emerald")) return 2.8f;
+        if (path.contains("golden")) return 3.2f;
+        if (path.contains("iron")) return 2.4f;
+        if (path.contains("copper")) return 2.2f;
+        if (path.contains("flint")) return 2.0f;
+        return 2.0f;
     }
 
     public static int getRequiredFishingLevel(ItemStack stack) {
@@ -153,38 +224,53 @@ public class RequirementUtils {
     }
 
     private static void populateFletchingUnlocks(List<UnlockInfo> unlocks) {
-        unlocks.add(new UnlockInfo(1, "Oak Bows", new ItemStack(Items.BOW)));
-        unlocks.add(new UnlockInfo(1, "Flint Arrows", new ItemStack(Items.ARROW)));
-        unlocks.add(new UnlockInfo(5, "Copper Arrows", new ItemStack(Items.COPPER_INGOT)));
-        unlocks.add(new UnlockInfo(15, "Spruce Bows", new ItemStack(Blocks.SPRUCE_LOG)));
-        unlocks.add(new UnlockInfo(15, "Birch Bows", new ItemStack(Blocks.BIRCH_LOG)));
-        unlocks.add(new UnlockInfo(15, "Iron Arrows", new ItemStack(Items.IRON_INGOT)));
-        unlocks.add(new UnlockInfo(30, "Jungle Bows", new ItemStack(Blocks.JUNGLE_LOG)));
-        unlocks.add(new UnlockInfo(40, "Golden Arrows", new ItemStack(Items.GOLD_INGOT)));
-        unlocks.add(new UnlockInfo(40, "Golden Arrows", new ItemStack(Items.GOLD_INGOT)));
-        unlocks.add(new UnlockInfo(45, "Acacia Bows", new ItemStack(Blocks.ACACIA_LOG)));
-        unlocks.add(new UnlockInfo(60, "Dark Oak Bows", new ItemStack(Blocks.DARK_OAK_LOG)));
-        unlocks.add(new UnlockInfo(65, "Diamond Arrows", new ItemStack(Items.DIAMOND)));
-        unlocks.add(new UnlockInfo(75, "Mangrove Bows", new ItemStack(Blocks.MANGROVE_LOG)));
-        unlocks.add(new UnlockInfo(85, "Cherry Bows", new ItemStack(Blocks.CHERRY_LOG)));
-        unlocks.add(new UnlockInfo(85, "Netherite Arrows", new ItemStack(Items.NETHERITE_INGOT)));
+        unlocks.add(new UnlockInfo(1, "Oak Bows", new ItemStack((ItemLike) ModItems.OAK_BOW)));
+        unlocks.add(new UnlockInfo(1, "Flint Arrows", new ItemStack((ItemLike) ModItems.FLINT_ARROW)));
+        unlocks.add(new UnlockInfo(1, "Flint Arrow Heads", new ItemStack((ItemLike) ModItems.FLINT_ARROW_HEADS)));
+        unlocks.add(new UnlockInfo(5, "Copper Arrows", new ItemStack((ItemLike) ModItems.COPPER_ARROW)));
+        unlocks.add(new UnlockInfo(5, "Copper Arrow Heads", new ItemStack((ItemLike) ModItems.COPPER_ARROW_HEADS)));
+        unlocks.add(new UnlockInfo(15, "Spruce Bows", new ItemStack((ItemLike) ModItems.SPRUCE_BOW)));
+        unlocks.add(new UnlockInfo(15, "Birch Bows", new ItemStack((ItemLike) ModItems.BIRCH_BOW)));
+        unlocks.add(new UnlockInfo(15, "Iron Arrows", new ItemStack((ItemLike) ModItems.IRON_ARROW)));
+        unlocks.add(new UnlockInfo(15, "Iron Arrow Heads", new ItemStack((ItemLike) ModItems.IRON_ARROW_HEADS)));
+        unlocks.add(new UnlockInfo(30, "Jungle Bows", new ItemStack((ItemLike) ModItems.JUNGLE_BOW)));
+        unlocks.add(new UnlockInfo(40, "Golden Arrows", new ItemStack((ItemLike) ModItems.GOLDEN_ARROW)));
+        unlocks.add(new UnlockInfo(40, "Golden Arrow Heads", new ItemStack((ItemLike) ModItems.GOLDEN_ARROW_HEADS)));
+        unlocks.add(new UnlockInfo(45, "Acacia Bows", new ItemStack((ItemLike) ModItems.ACACIA_BOW)));
+        unlocks.add(new UnlockInfo(55, "Diamond Arrows", new ItemStack((ItemLike) ModItems.DIAMOND_ARROW)));
+        unlocks.add(new UnlockInfo(55, "Diamond Arrow Heads", new ItemStack((ItemLike) ModItems.DIAMOND_ARROW_HEADS)));
+        unlocks.add(new UnlockInfo(60, "Dark Oak Bows", new ItemStack((ItemLike) ModItems.DARK_OAK_BOW)));
+        unlocks.add(new UnlockInfo(65, "Emerald Arrows", new ItemStack((ItemLike) ModItems.EMERALD_ARROW)));
+        unlocks.add(new UnlockInfo(65, "Emerald Arrow Heads", new ItemStack((ItemLike) ModItems.EMERALD_ARROW_HEADS)));
+        unlocks.add(new UnlockInfo(75, "Mangrove Bows", new ItemStack((ItemLike) ModItems.MANGROVE_BOW)));
+        unlocks.add(new UnlockInfo(85, "Cherry Bows", new ItemStack((ItemLike) ModItems.CHERRY_BOW)));
+        unlocks.add(new UnlockInfo(85, "Netherite Arrows", new ItemStack((ItemLike) ModItems.NETHERITE_ARROW)));
+        unlocks.add(new UnlockInfo(85, "Netherite Arrow Heads", new ItemStack((ItemLike) ModItems.NETHERITE_ARROW_HEADS)));
     }
 
     private static void populateRangedUnlocks(List<UnlockInfo> unlocks) {
-        unlocks.add(new UnlockInfo(1, "Oak Bows", new ItemStack(Items.BOW)));
-        unlocks.add(new UnlockInfo(1, "Flint Arrows", new ItemStack(Items.ARROW)));
-        unlocks.add(new UnlockInfo(5, "Copper Arrows", new ItemStack(Items.COPPER_INGOT)));
-        unlocks.add(new UnlockInfo(15, "Spruce Bows", new ItemStack(Blocks.SPRUCE_LOG)));
-        unlocks.add(new UnlockInfo(15, "Birch Bows", new ItemStack(Blocks.BIRCH_LOG)));
-        unlocks.add(new UnlockInfo(15, "Iron Arrows", new ItemStack(Items.IRON_INGOT)));
-        unlocks.add(new UnlockInfo(30, "Jungle Bows", new ItemStack(Blocks.JUNGLE_LOG)));
-        unlocks.add(new UnlockInfo(40, "Golden Arrows", new ItemStack(Items.GOLD_INGOT)));
-        unlocks.add(new UnlockInfo(45, "Acacia Bows", new ItemStack(Blocks.ACACIA_LOG)));
-        unlocks.add(new UnlockInfo(60, "Dark Oak Bows", new ItemStack(Blocks.DARK_OAK_LOG)));
-        unlocks.add(new UnlockInfo(65, "Diamond Arrows", new ItemStack(Items.DIAMOND)));
-        unlocks.add(new UnlockInfo(75, "Mangrove Bows", new ItemStack(Blocks.MANGROVE_LOG)));
-        unlocks.add(new UnlockInfo(85, "Cherry Bows", new ItemStack(Blocks.CHERRY_LOG)));
-        unlocks.add(new UnlockInfo(85, "Netherite Arrows", new ItemStack(Items.NETHERITE_INGOT)));
+        unlocks.add(new UnlockInfo(1, "Oak Bows", new ItemStack((ItemLike) ModItems.OAK_BOW)));
+        unlocks.add(new UnlockInfo(1, "Flint Arrows", new ItemStack((ItemLike) ModItems.FLINT_ARROW)));
+        unlocks.add(new UnlockInfo(1, "Flint Arrow Heads", new ItemStack((ItemLike) ModItems.FLINT_ARROW_HEADS)));
+        unlocks.add(new UnlockInfo(5, "Copper Arrows", new ItemStack((ItemLike) ModItems.COPPER_ARROW)));
+        unlocks.add(new UnlockInfo(5, "Copper Arrow Heads", new ItemStack((ItemLike) ModItems.COPPER_ARROW_HEADS)));
+        unlocks.add(new UnlockInfo(15, "Spruce Bows", new ItemStack((ItemLike) ModItems.SPRUCE_BOW)));
+        unlocks.add(new UnlockInfo(15, "Birch Bows", new ItemStack((ItemLike) ModItems.BIRCH_BOW)));
+        unlocks.add(new UnlockInfo(15, "Iron Arrows", new ItemStack((ItemLike) ModItems.IRON_ARROW)));
+        unlocks.add(new UnlockInfo(15, "Iron Arrow Heads", new ItemStack((ItemLike) ModItems.IRON_ARROW_HEADS)));
+        unlocks.add(new UnlockInfo(30, "Jungle Bows", new ItemStack((ItemLike) ModItems.JUNGLE_BOW)));
+        unlocks.add(new UnlockInfo(40, "Golden Arrows", new ItemStack((ItemLike) ModItems.GOLDEN_ARROW)));
+        unlocks.add(new UnlockInfo(40, "Golden Arrow Heads", new ItemStack((ItemLike) ModItems.GOLDEN_ARROW_HEADS)));
+        unlocks.add(new UnlockInfo(45, "Acacia Bows", new ItemStack((ItemLike) ModItems.ACACIA_BOW)));
+        unlocks.add(new UnlockInfo(55, "Diamond Arrows", new ItemStack((ItemLike) ModItems.DIAMOND_ARROW)));
+        unlocks.add(new UnlockInfo(55, "Diamond Arrow Heads", new ItemStack((ItemLike) ModItems.DIAMOND_ARROW_HEADS)));
+        unlocks.add(new UnlockInfo(60, "Dark Oak Bows", new ItemStack((ItemLike) ModItems.DARK_OAK_BOW)));
+        unlocks.add(new UnlockInfo(65, "Emerald Arrows", new ItemStack((ItemLike) ModItems.EMERALD_ARROW)));
+        unlocks.add(new UnlockInfo(65, "Emerald Arrow Heads", new ItemStack((ItemLike) ModItems.EMERALD_ARROW_HEADS)));
+        unlocks.add(new UnlockInfo(75, "Mangrove Bows", new ItemStack((ItemLike) ModItems.MANGROVE_BOW)));
+        unlocks.add(new UnlockInfo(85, "Cherry Bows", new ItemStack((ItemLike) ModItems.CHERRY_BOW)));
+        unlocks.add(new UnlockInfo(85, "Netherite Arrows", new ItemStack((ItemLike) ModItems.NETHERITE_ARROW)));
+        unlocks.add(new UnlockInfo(85, "Netherite Arrow Heads", new ItemStack((ItemLike) ModItems.NETHERITE_ARROW_HEADS)));
     }
 
     // Move existing case logic to private helpers to keep the switch clean

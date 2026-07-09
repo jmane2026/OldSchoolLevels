@@ -8,6 +8,7 @@ import com.jmane2026.oldschoollevels.util.ExperienceUtils;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.world.entity.ItemOwner;
 import net.minecraft.world.entity.projectile.arrow.AbstractArrow;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -95,14 +96,20 @@ public class LevelingHandler {
                 SkillData data = player.getData(ModAttachments.SKILLS.get());
                 int rangedLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.RANGED));
 
-                // 1% bonus damage per Ranged level
-                float levelMultiplier = 1.0f + (rangedLvl / 100.0f);
-                finalDamage *= levelMultiplier;
+                // 1. Get Arrow Tier Damage using getPickupItemStackOrigin() from AbstractArrow.java source
+                ItemStack arrowStack = arrow.getPickupItemStackOrigin();
+                String arrowPath = !arrowStack.isEmpty() ? BuiltInRegistries.ITEM.getKey(arrowStack.getItem()).getPath() : "";
+                
+                float arrowBonus = Math.max(0, RequirementUtils.getArrowDamage(arrowPath) - 1.0f);
+                finalDamage += arrowBonus;
 
-                // Add flat bonus based on arrow type (assuming you name them material_arrow)
-                String arrowPath = BuiltInRegistries.ENTITY_TYPE.getKey(arrow.getType()).getPath();
-                if (arrowPath.contains("diamond")) finalDamage += 3.0f;
-                else if (arrowPath.contains("netherite")) finalDamage += 5.0f;
+                // 2. Get Bow Tier Damage (factors in material of the held bow)
+                ItemStack bow = player.getMainHandItem();
+                String bowPath = BuiltInRegistries.ITEM.getKey(bow.getItem()).getPath();
+                finalDamage += RequirementUtils.getBowDamageBonus(bowPath);
+
+                // 3. Final scaling: 1% bonus damage per Ranged level
+                finalDamage *= (1.0f + (rangedLvl / 100.0f));
             }
 
             float damage = finalDamage;
@@ -156,37 +163,48 @@ public class LevelingHandler {
     public static void onCraft(PlayerEvent.ItemCraftedEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             ItemStack item = event.getCrafting();
-
             String path = BuiltInRegistries.ITEM.getKey(item.getItem()).getPath();
+            long count = item.getCount();
 
             // 1. Handle Stick Fletching (XP based on quantity)
             if (item.is(Items.STICK)) {
-                // We award 1 XP per stick generated
-                awardXp(player, Skill.FLETCHING, 1L * item.getCount());
+                awardXp(player, Skill.FLETCHING, 1L * count);
             }
-
-            // 2. Handle Bow Fletching
-            if (path.contains("_bow") || item.is(Items.BOW)) {
-                long xp = 25; // Base Oak/Vanilla
-                if (path.contains("spruce") || path.contains("birch")) xp = 40;
-                else if (path.contains("jungle")) xp = 60;
-                else if (path.contains("acacia")) xp = 80;
-                else if (path.contains("dark_oak")) xp = 100;
-                else if (path.contains("mangrove")) xp = 125;
-                else if (path.contains("cherry")) xp = 150;
-
-                awardXp(player, Skill.FLETCHING, xp);
+            
+            // 2. Handle Knives
+            else if (path.contains("_knife")) {
+                awardXp(player, Skill.FLETCHING, 15L);
             }
-
-            // 3. Handle Arrow Fletching
-            if (path.contains("arrow") || item.is(Items.ARROW)) {
-                awardXp(player, Skill.FLETCHING, 5L * item.getCount());
+            
+            // 3. Handle Arrow Heads
+            else if (path.contains("_arrow_heads")) {
+                awardXp(player, Skill.FLETCHING, 2L * count);
+            }
+            
+            // 4. Handle Arrows
+            else if (path.contains("arrow") || item.is(Items.ARROW)) {
+                awardXp(player, Skill.FLETCHING, 5L * count);
+            }
+            
+            // 5. Handle Bows
+            else if (path.contains("_bow") || item.is(Items.BOW)) {
+                awardXp(player, Skill.FLETCHING, getBowFletchXp(path));
             }
             
             if (isMetalGear(item)) {
                 awardXp(player, Skill.SMITHING, 50L);
             }
         }
+    }
+
+    private static long getBowFletchXp(String path) {
+        if (path.contains("cherry")) return 150;
+        if (path.contains("mangrove")) return 125;
+        if (path.contains("dark_oak")) return 100;
+        if (path.contains("acacia")) return 80;
+        if (path.contains("jungle")) return 60;
+        if (path.contains("spruce") || path.contains("birch")) return 40;
+        return 25; // Oak
     }
 
     @SubscribeEvent
@@ -285,7 +303,7 @@ public class LevelingHandler {
         if (stack.is(Items.SALMON)) return 70;
         if (stack.is(Items.PUFFERFISH)) return 100;
         if (stack.is(Items.TROPICAL_FISH)) return 150;
-        return 5; // Junk or other items
+        return 5; // Junk or other item
     }
 
     private static long getFoodXp(ItemStack stack) {

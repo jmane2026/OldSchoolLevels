@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "I": "minecraft:netherite_ingot",
+    "S": "minecraft:stick"
+  },
+  "pattern": [
+    " I",
+    "S "
+  ],
+  "result": {
+    "count": 1,
+    "id": "oldschoollevels:netherite_knife"
+  }
+}

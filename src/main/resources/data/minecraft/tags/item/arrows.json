@@ -1,0 +1,12 @@
+{
+  "replace": false,
+  "values": [
+    "oldschoollevels:flint_arrow",
+    "oldschoollevels:copper_arrow",
+    "oldschoollevels:iron_arrow",
+    "oldschoollevels:golden_arrow",
+    "oldschoollevels:emerald_arrow",
+    "oldschoollevels:diamond_arrow",
+    "oldschoollevels:netherite_arrow"
+  ]
+}

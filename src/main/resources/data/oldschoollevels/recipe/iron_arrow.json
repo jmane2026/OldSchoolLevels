@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "H": "oldschoollevels:iron_arrow_heads",
+    "S": "minecraft:stick",
+    "F": "minecraft:feather"
+  },
+  "pattern": [
+    "H",
+    "S",
+    "F"
+  ],
+  "result": {
+    "count": 1,
+    "id": "oldschoollevels:iron_arrow"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "I": "minecraft:diamond",
+    "S": "minecraft:stick"
+  },
+  "pattern": [
+    " I",
+    "S "
+  ],
+  "result": {
+    "count": 1,
+    "id": "oldschoollevels:diamond_knife"
+  }
+}

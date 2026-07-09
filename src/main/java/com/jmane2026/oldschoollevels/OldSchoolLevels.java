@@ -1,6 +1,7 @@
 package com.jmane2026.oldschoollevels;
 
 import com.jmane2026.oldschoollevels.core.ModAttachments;
+import com.jmane2026.oldschoollevels.core.ModItems;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.ModContainer;
@@ -11,6 +12,7 @@ public class OldSchoolLevels {
     public static final String MODID = "oldschoollevels";
 
     public OldSchoolLevels(IEventBus modEventBus, ModContainer modContainer) {
+        ModItems.ITEMS.register(modEventBus);
         ModAttachments.ATTACHMENT_TYPES.register(modEventBus);
     }
 }
