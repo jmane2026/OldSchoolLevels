@@ -211,8 +211,7 @@ public class RequirementUtils {
             case DEFENSE -> populateDefenseUnlocks(unlocks);
             case SMITHING -> populateSmithingUnlocks(unlocks);
             case COOKING -> populateCookingUnlocks(unlocks);
-            case FLETCHING -> populateFletchingUnlocks(unlocks);
-            case RANGED -> populateRangedUnlocks(unlocks);
+            case FLETCHING, RANGED -> populateArcheryUnlocks(unlocks);
             case LIFE -> {
                 unlocks.add(new UnlockInfo(11, "Health Bonus (+1 HP)", new ItemStack(Items.APPLE)));
                 unlocks.add(new UnlockInfo(13, "Health Bonus (+2 HP)", new ItemStack(Items.GOLDEN_APPLE)));
@@ -223,32 +222,7 @@ public class RequirementUtils {
         return unlocks;
     }
 
-    private static void populateFletchingUnlocks(List<UnlockInfo> unlocks) {
-        unlocks.add(new UnlockInfo(1, "Oak Bows", new ItemStack((ItemLike) ModItems.OAK_BOW)));
-        unlocks.add(new UnlockInfo(1, "Flint Arrows", new ItemStack((ItemLike) ModItems.FLINT_ARROW)));
-        unlocks.add(new UnlockInfo(1, "Flint Arrow Heads", new ItemStack((ItemLike) ModItems.FLINT_ARROW_HEADS)));
-        unlocks.add(new UnlockInfo(5, "Copper Arrows", new ItemStack((ItemLike) ModItems.COPPER_ARROW)));
-        unlocks.add(new UnlockInfo(5, "Copper Arrow Heads", new ItemStack((ItemLike) ModItems.COPPER_ARROW_HEADS)));
-        unlocks.add(new UnlockInfo(15, "Spruce Bows", new ItemStack((ItemLike) ModItems.SPRUCE_BOW)));
-        unlocks.add(new UnlockInfo(15, "Birch Bows", new ItemStack((ItemLike) ModItems.BIRCH_BOW)));
-        unlocks.add(new UnlockInfo(15, "Iron Arrows", new ItemStack((ItemLike) ModItems.IRON_ARROW)));
-        unlocks.add(new UnlockInfo(15, "Iron Arrow Heads", new ItemStack((ItemLike) ModItems.IRON_ARROW_HEADS)));
-        unlocks.add(new UnlockInfo(30, "Jungle Bows", new ItemStack((ItemLike) ModItems.JUNGLE_BOW)));
-        unlocks.add(new UnlockInfo(40, "Golden Arrows", new ItemStack((ItemLike) ModItems.GOLDEN_ARROW)));
-        unlocks.add(new UnlockInfo(40, "Golden Arrow Heads", new ItemStack((ItemLike) ModItems.GOLDEN_ARROW_HEADS)));
-        unlocks.add(new UnlockInfo(45, "Acacia Bows", new ItemStack((ItemLike) ModItems.ACACIA_BOW)));
-        unlocks.add(new UnlockInfo(55, "Diamond Arrows", new ItemStack((ItemLike) ModItems.DIAMOND_ARROW)));
-        unlocks.add(new UnlockInfo(55, "Diamond Arrow Heads", new ItemStack((ItemLike) ModItems.DIAMOND_ARROW_HEADS)));
-        unlocks.add(new UnlockInfo(60, "Dark Oak Bows", new ItemStack((ItemLike) ModItems.DARK_OAK_BOW)));
-        unlocks.add(new UnlockInfo(65, "Emerald Arrows", new ItemStack((ItemLike) ModItems.EMERALD_ARROW)));
-        unlocks.add(new UnlockInfo(65, "Emerald Arrow Heads", new ItemStack((ItemLike) ModItems.EMERALD_ARROW_HEADS)));
-        unlocks.add(new UnlockInfo(75, "Mangrove Bows", new ItemStack((ItemLike) ModItems.MANGROVE_BOW)));
-        unlocks.add(new UnlockInfo(85, "Cherry Bows", new ItemStack((ItemLike) ModItems.CHERRY_BOW)));
-        unlocks.add(new UnlockInfo(85, "Netherite Arrows", new ItemStack((ItemLike) ModItems.NETHERITE_ARROW)));
-        unlocks.add(new UnlockInfo(85, "Netherite Arrow Heads", new ItemStack((ItemLike) ModItems.NETHERITE_ARROW_HEADS)));
-    }
-
-    private static void populateRangedUnlocks(List<UnlockInfo> unlocks) {
+    private static void populateArcheryUnlocks(List<UnlockInfo> unlocks) {
         unlocks.add(new UnlockInfo(1, "Oak Bows", new ItemStack((ItemLike) ModItems.OAK_BOW)));
         unlocks.add(new UnlockInfo(1, "Flint Arrows", new ItemStack((ItemLike) ModItems.FLINT_ARROW)));
         unlocks.add(new UnlockInfo(1, "Flint Arrow Heads", new ItemStack((ItemLike) ModItems.FLINT_ARROW_HEADS)));

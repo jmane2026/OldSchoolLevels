@@ -336,6 +336,7 @@ public class RestrictionHandler {
             }
         }
 
+        boolean changed = false;
         for (Slot slot : menu.slots) {
             ItemStack stack = slot.getItem();
             if (stack.isEmpty()) continue;
@@ -349,9 +350,12 @@ public class RestrictionHandler {
             boolean isResult = slot instanceof ResultSlot || slot.container instanceof ResultContainer;
             if (isResult && (smithLvl < reqSmith || cookLvl < reqCook || (isFletchingItem && fletchLvl < reqFletch))) {
                 slot.set(ItemStack.EMPTY);
-                menu.broadcastChanges();
-
+                changed = true;
             }
+        }
+
+        if (changed) {
+            menu.broadcastChanges();
         }
     }
 
