@@ -7,7 +7,12 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 
-public record DamageNumberPayload(double x, double y, double z, float amount) implements CustomPacketPayload {
+public record DamageNumberPayload(
+        double x, double y, double z,
+        float amount,
+        boolean isCritical,
+        boolean isIncoming
+) implements CustomPacketPayload {
     public static final Type<DamageNumberPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath(OldSchoolLevels.MODID, "damage_number"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, DamageNumberPayload> STREAM_CODEC = StreamCodec.composite(
@@ -15,6 +20,8 @@ public record DamageNumberPayload(double x, double y, double z, float amount) im
             ByteBufCodecs.DOUBLE, DamageNumberPayload::y,
             ByteBufCodecs.DOUBLE, DamageNumberPayload::z,
             ByteBufCodecs.FLOAT, DamageNumberPayload::amount,
+            ByteBufCodecs.BOOL, DamageNumberPayload::isCritical,
+            ByteBufCodecs.BOOL, DamageNumberPayload::isIncoming,
             DamageNumberPayload::new
     );
 

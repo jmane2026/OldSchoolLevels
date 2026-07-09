@@ -4,140 +4,130 @@ import com.jmane2026.oldschoollevels.common.Skill;
 import com.jmane2026.oldschoollevels.util.ExperienceUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
+import net.minecraft.network.chat.Component;
+
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 public class XpNotificationOverlay {
-    // Inner class to track individual floating XP text instances
-    private static class XpDrop {
-        final Skill skill;
-        final long amount;
-        final int stagger;
+    private static final List<XpTicket> ACTIVE_NOTIFICATIONS = new ArrayList<>();
+    private static final int DISPLAY_DURATION = 60; // 3 seconds
+
+    private static class XpTicket {
+        Skill skill;
+        long amount;
+        long totalXp;
         int ticks;
 
-        XpDrop(Skill skill, long amount, int stagger) {
+        XpTicket(Skill skill, long amount, long totalXp) {
             this.skill = skill;
             this.amount = amount;
-            this.stagger = stagger;
-            this.ticks = MAX_TICKS;
+            this.totalXp = totalXp;
+            this.ticks = DISPLAY_DURATION;
+        }
+
+        void add(long extra, long newTotal) {
+            this.amount += extra;
+            this.totalXp = newTotal;
+            this.ticks = DISPLAY_DURATION; // Refresh the timer
         }
     }
 
-    private static final List<XpDrop> ACTIVE_DROPS = new ArrayList<>();
-    private static Skill activeSkill = null;
-    private static long currentTotalXp = 0;
-    private static int boxTicks = 0;
-    private static final int MAX_TICKS = 80; // 4 seconds
-
-    public static void notify(Skill skill, long amount, long total) {
-        // Calculate levels to detect a level-up
-        int oldLevel = ExperienceUtils.getLevelAtExperience(total - amount);
-        int newLevel = ExperienceUtils.getLevelAtExperience(total);
-
-        if (newLevel > oldLevel) {
-            Minecraft mc = Minecraft.getInstance();
-            if (mc.level != null && mc.player != null) {
-                // Play the firework blast sound at the player's location
-                mc.level.playLocalSound(mc.player.getX(), mc.player.getY(), mc.player.getZ(),
-                        SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.PLAYERS, 1.0f, 1.0f, false);
+    public static void notify(Skill skill, long amount, long totalXp) {
+        // MERGING LOGIC: Check if we already have a notification for this skill
+        for (XpTicket ticket : ACTIVE_NOTIFICATIONS) {
+            if (ticket.skill == skill) {
+                ticket.add(amount, totalXp);
+                return;
             }
         }
 
-        // Find the highest stagger currently in the list and add 1
-        int stagger = ACTIVE_DROPS.stream()
-                .mapToInt(d -> d.stagger)
-                .max()
-                .orElse(-1) + 1;
-
-        ACTIVE_DROPS.add(new XpDrop(skill, amount, stagger));
-
-        // Update HUD box state to reflect the most recent gain
-        activeSkill = skill;
-        currentTotalXp = total;
-        boxTicks = MAX_TICKS;
+        // If not found, add a new one
+        ACTIVE_NOTIFICATIONS.add(new XpTicket(skill, amount, totalXp));
     }
 
     public static void clientTick() {
-        if (Minecraft.getInstance().isPaused()) return;
-
-        if (boxTicks > 0) boxTicks--;
-        
-        // Update all active drops and remove expired ones
-        ACTIVE_DROPS.removeIf(drop -> {
-            drop.ticks--;
-            return drop.ticks <= 0;
-        });
+        Iterator<XpTicket> it = ACTIVE_NOTIFICATIONS.iterator();
+        while (it.hasNext()) {
+            XpTicket ticket = it.next();
+            ticket.ticks--;
+            if (ticket.ticks <= 0) {
+                it.remove();
+            }
+        }
     }
 
     public static void render(GuiGraphicsExtractor graphics, float partialTick) {
-        if ((boxTicks <= 0 && ACTIVE_DROPS.isEmpty()) || activeSkill == null) return;
+        if (ACTIVE_NOTIFICATIONS.isEmpty()) return;
 
         Minecraft mc = Minecraft.getInstance();
+        int screenWidth = mc.getWindow().getGuiScaledWidth();
         int screenHeight = mc.getWindow().getGuiScaledHeight();
-        int x = 10;
-        int y = screenHeight - 75;
-        int width = 120;
-        int height = 35;
+        
+        // POSITIONING: Bottom Left, stacking upwards
+        int startX = 10;
+        int y = screenHeight - 40;
 
-        // 1. Render the HUD Box (Background, Icon, Progress Bar)
-        if (boxTicks > 0) {
-            renderHudBox(graphics, mc, x, y, width, height, partialTick);
+        for (XpTicket ticket : ACTIVE_NOTIFICATIONS) {
+            // Calculate Alpha for a smooth fade out in the last 10 ticks
+            float fade = ticket.ticks < 10 ? (ticket.ticks / 10f) : 1.0f;
+            int alpha = (int)(fade * 255);
+            
+            int white = (alpha << 24) | 0xFFFFFF;
+            int yellow = (alpha << 24) | 0xFFFF00;
+            int gray = (alpha << 24) | 0x333333;
+            int barGreen = (alpha << 24) | 0x00FF00;
+
+            // Calculate live level and progress
+            int lvl = ExperienceUtils.getLevelAtExperience(ticket.totalXp);
+            long currentXp = ExperienceUtils.getXpForLevel(lvl);
+            long nextXp = ExperienceUtils.getXpForLevel(lvl + 1);
+            float progress = (float) (ticket.totalXp - currentXp) / (nextXp - currentXp);
+            if (lvl >= 99) progress = 1.0f;
+
+            graphics.pose().pushMatrix();
+
+            // 0. Define Box Dimensions
+            int boxWidth = 120;
+            int boxHeight = 30;
+            int bgColor = ((int)(fade * 140) << 24); // Semi-transparent black
+            // Draw Background Box (Fixing absolute coordinate overflow)
+            graphics.fill(startX, y, startX + boxWidth, y + boxHeight, bgColor);
+            graphics.outline(startX, y, boxWidth, boxHeight, (alpha << 24) | 0x000000);
+
+            // 1. Draw Icon
+            graphics.item(ticket.skill.getIcon(), startX + 2, y + 2);
+
+            // 2. Draw Skill Name (Top Left)
+            String title = ticket.skill.getDisplayName();
+            graphics.text(mc.font, title, startX + 22, y + 4, white);
+
+            // 3. Draw Level (Top Right)
+            String lvlText = "Lvl: " + lvl;
+            int lvlWidth = mc.font.width(lvlText);
+            graphics.text(mc.font, lvlText, startX + boxWidth - lvlWidth - 4, y + 4, white);
+
+            // 4. Draw XP Amount (Middle - Yellow)
+            String xpText = "+" + ticket.amount + "xp";
+            graphics.text(mc.font, xpText, startX + 22, y + 13, yellow);
+
+            // 5. Draw Progress Bar (Bottom - leaving 1px space from border)
+            int barWidth = boxWidth - 26;
+            int barX = startX + 22;
+            int barY = y + 24; // Lowered to leave space
+            
+            // Background
+            graphics.fill(barX, barY, barX + barWidth, barY + 3, gray);
+            // Progress
+            graphics.fill(barX, barY, barX + (int)(barWidth * progress), barY + 3, barGreen);
+            // Outline
+            graphics.outline(barX - 1, barY - 1, barWidth + 2, 5, (alpha << 24) | 0x000000);
+
+            // Move Y up for the next notification in the stack (Box height + gap)
+            y -= (boxHeight + 4);
+
+            graphics.pose().popMatrix();
         }
-
-        // 2. Render all active scrolling XP drops
-        for (XpDrop drop : ACTIVE_DROPS) {
-            renderXpDrop(graphics, mc, drop, x, y, partialTick);
-        }
-    }
-
-    private static void renderHudBox(GuiGraphicsExtractor graphics, Minecraft mc, int x, int y, int width, int height, float partialTick) {
-        // Calculate Alpha for fading
-        int alpha = (boxTicks < 15) ? (int) (255 * ((boxTicks - partialTick) / 15f)) : 255;
-        alpha = Math.max(0, Math.min(255, alpha));
-
-        int bgColor = (alpha * 0xAA / 255) << 24;
-        int textColor = (alpha << 24) | 0xFFFFFF;
-
-        graphics.fill(x, y, x + width, y + height, bgColor);
-        graphics.outline(x, y, width, height, (alpha << 24) | 0xFFFFFF);
-        graphics.item(activeSkill.getIcon(), x + 5, y + 5);
-
-        int level = ExperienceUtils.getLevelAtExperience(currentTotalXp);
-        graphics.text(mc.font, activeSkill.getDisplayName() + " Lvl: " + level, x + 25, y + 7, textColor);
-
-        long prevXp = ExperienceUtils.getExperienceAtLevel(level);
-        long nextXp = ExperienceUtils.getExperienceAtLevel(level + 1);
-        float progress = (float) (currentTotalXp - prevXp) / (float) (nextXp - prevXp);
-        if (level >= 99) progress = 1.0f;
-
-        int barWidth = width - 30;
-        graphics.fill(x + 25, y + 20, x + 25 + barWidth, y + 24, (alpha << 24) | 0x444444);
-        graphics.fill(x + 25, y + 20, x + 25 + (int) (barWidth * progress), y + 24, (alpha << 24) | 0x00FF00);
-    }
-
-    private static void renderXpDrop(GuiGraphicsExtractor graphics, Minecraft mc, XpDrop drop, int x, int y, float partialTick) {
-        int alpha = (drop.ticks < 15) ? (int) (255 * ((drop.ticks - partialTick) / 15f)) : 255;
-        alpha = Math.max(0, Math.min(255, alpha));
-        int xpColor = (alpha << 24) | 0xFFFF00;
-
-        // Scrolling XP Text
-        float scrollProgress = 1.0f - (((float) drop.ticks - partialTick) / (float) MAX_TICKS);
-        // Start 10 pixels above the box and stack upwards by subtracting the stagger
-        float scrollY = (float) y - 12f - (scrollProgress * 50f) - (drop.stagger * 12f);
-
-        graphics.pose().pushMatrix();
-        graphics.pose().translate((float) x + 5f, scrollY, graphics.pose());
-
-        // Render a small version of the skill icon next to the floating text
-        graphics.pose().pushMatrix();
-        graphics.pose().scale(0.6f, 0.6f, graphics.pose());
-        graphics.item(drop.skill.getIcon(), 0, 0);
-        graphics.pose().popMatrix();
-
-        // Render the XP text with a slight offset to the right of the small icon
-        graphics.text(mc.font, "+" + drop.amount, 12, 2, xpColor);
-        graphics.pose().popMatrix();
     }
 }

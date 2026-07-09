@@ -5,6 +5,7 @@ import com.jmane2026.oldschoollevels.client.gui.DamageIndicatorManager;
 import com.jmane2026.oldschoollevels.client.gui.XpNotificationOverlay;
 import com.jmane2026.oldschoollevels.common.SkillAttributeHandler;
 import com.jmane2026.oldschoollevels.core.ModAttachments;
+import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
@@ -32,7 +33,7 @@ public class ModNetworking {
                 (payload, context) -> {
                     context.enqueueWork(() -> {
                         DamageIndicatorManager.add(
-                                payload.x(), payload.y(), payload.z(), payload.amount()
+                                payload.amount(), payload.isCritical(), payload.isIncoming()
                         );
                     });
                 }
@@ -44,7 +45,7 @@ public class ModNetworking {
                 (payload, context) -> {
                     context.enqueueWork(() -> {
                         context.player().setData(ModAttachments.COMBAT_STYLE, payload.style());
-                        SkillAttributeHandler.refreshAttributes((net.minecraft.server.level.ServerPlayer) context.player());
+                        SkillAttributeHandler.refreshAttributes((ServerPlayer) context.player());
                     });
                 }
         );

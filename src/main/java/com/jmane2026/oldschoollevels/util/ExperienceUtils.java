@@ -5,14 +5,14 @@ public class ExperienceUtils {
 
     public static int getLevelAtExperience(long xp) {
         for (int level = 1; level <= MAX_LEVEL; level++) {
-            if (xp < getExperienceAtLevel(level + 1)) {
+            if (xp < getXpForLevel(level + 1)) {
                 return level;
             }
         }
         return MAX_LEVEL;
     }
 
-    public static long getExperienceAtLevel(int level) {
+    public static long getXpForLevel(int level) {
         if (level <= 1) return 0;
         double total = 0;
         for (int i = 1; i < level; i++) {
@@ -24,6 +24,6 @@ public class ExperienceUtils {
     public static long getXpToNextLevel(long currentXp) {
         int currentLevel = getLevelAtExperience(currentXp);
         if (currentLevel >= MAX_LEVEL) return 0;
-        return getExperienceAtLevel(currentLevel + 1) - currentXp;
+        return getXpForLevel(currentLevel + 1) - currentXp;
     }
 }

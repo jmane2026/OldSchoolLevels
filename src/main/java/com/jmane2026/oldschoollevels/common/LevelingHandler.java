@@ -6,6 +6,7 @@ import com.jmane2026.oldschoollevels.network.DamageNumberPayload;
 import com.jmane2026.oldschoollevels.network.XpGainPayload;
 import com.jmane2026.oldschoollevels.util.ExperienceUtils;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.ItemOwner;
@@ -27,6 +28,23 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 @EventBusSubscriber(modid = OldSchoolLevels.MODID)
 public class LevelingHandler {
+
+    private static final float BASE_CRIT_CHANCE = 0.05f; // 5% chance
+    // Temporary storage to track if the current hit is a critical
+    private static boolean lastHitWasCritical = false;
+
+    @SubscribeEvent
+    public static void onIncomingDamage(LivingIncomingDamageEvent event) {
+        // Handle Critical Hits for Players
+        if (event.getSource().getEntity() instanceof ServerPlayer player) {
+            if (player.getRandom().nextFloat() < BASE_CRIT_CHANCE) {
+                event.setAmount(event.getAmount() * 2);
+                lastHitWasCritical = true;
+            } else {
+                lastHitWasCritical = false;
+            }
+        }
+    }
 
     @SubscribeEvent
     public static void onBlockBreak(BlockEvent.BreakEvent event) {
@@ -87,6 +105,7 @@ public class LevelingHandler {
 
     @SubscribeEvent
     public static void onCombat(LivingDamageEvent.Post event) {
+        // 1. Handle OUTGOING Damage (Player hits something)
         if (event.getSource().getEntity() instanceof ServerPlayer player) {
             float baseDamage = event.getNewDamage();
             float finalDamage = baseDamage;
@@ -116,10 +135,13 @@ public class LevelingHandler {
 
             if (damage <= 0) return;
 
-            // Send Damage Splat packet
+            // Send Damage Splat packet (isCritical = tracked, isIncoming = false)
             PacketDistributor.sendToPlayer(player, new DamageNumberPayload(
-                    event.getEntity().getX(), event.getEntity().getY(), event.getEntity().getZ(), damage
+                    event.getEntity().getX(), event.getEntity().getY(), event.getEntity().getZ(), 
+                    damage, lastHitWasCritical, false
             ));
+            
+            lastHitWasCritical = false; // Reset flag
 
             // OSRS Scale: ~4 XP per 1 damage point (scaled to MC hearts)
             long combatXp = Math.round(damage * 4);
@@ -142,6 +164,16 @@ public class LevelingHandler {
                 }
             }
             awardXp(player, Skill.LIFE, lifeXp);
+        }
+
+        // 2. Handle INCOMING Damage (Something hits Player)
+        if (event.getEntity() instanceof ServerPlayer victim) {
+            float incomingDmg = event.getNewDamage();
+            if (incomingDmg > 0) {
+                PacketDistributor.sendToPlayer(victim, new DamageNumberPayload(
+                        victim.getX(), victim.getY(), victim.getZ(), incomingDmg, false, true
+                ));
+            }
         }
     }
 
