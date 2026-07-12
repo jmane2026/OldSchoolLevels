@@ -13,7 +13,7 @@ import net.minecraft.world.phys.Vec3;
 
 public class AirBlastProjectile extends AbstractWindCharge {
     private Spell spellType = Spell.AIR_BLAST;
-    private float damage = 3.0f;
+    private float damage = 5.0f;
 
     public AirBlastProjectile(EntityType<? extends AirBlastProjectile> type, Level level) {
         super(type, level);

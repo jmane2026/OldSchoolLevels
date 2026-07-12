@@ -5,8 +5,10 @@ import com.jmane2026.oldschoollevels.common.CombatStyle;
 import com.jmane2026.oldschoollevels.common.SkillData;
 import com.jmane2026.oldschoollevels.common.Spell;
 import com.jmane2026.oldschoollevels.common.TeleportLocation;
+import com.mojang.serialization.Codec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
@@ -67,4 +69,17 @@ public class ModAttachments {
                     .copyOnDeath()
                     .build()
     );
+
+    public static final Supplier<AttachmentType<Float>> STAMINA = ATTACHMENT_TYPES.register(
+            "stamina",
+            () -> AttachmentType.builder(() -> 100.0f)
+                    .serialize(Codec.FLOAT.fieldOf("value"))
+                    .sync(ByteBufCodecs.FLOAT)
+                    .copyOnDeath()
+                    .build());
+
+    public static final Supplier<AttachmentType<Vec3>> LAST_POS = ATTACHMENT_TYPES.register(
+            "last_pos",
+            () -> AttachmentType.builder(() -> Vec3.ZERO)
+                    .build());
 }

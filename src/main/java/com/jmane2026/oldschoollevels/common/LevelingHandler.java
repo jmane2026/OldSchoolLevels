@@ -11,6 +11,9 @@ import com.jmane2026.oldschoollevels.network.UnlockNotificationPayload;
 import com.jmane2026.oldschoollevels.network.XpGainPayload;
 import com.jmane2026.oldschoollevels.util.ExperienceUtils;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.food.FoodData;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.BlockTags;
@@ -25,18 +28,30 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
+import net.neoforged.neoforge.event.entity.living.LivingEvent;
+import net.neoforged.neoforge.event.entity.living.LivingFallEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
 import net.neoforged.neoforge.event.entity.player.ItemFishedEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent;
 import net.minecraft.util.TriState;
+import net.minecraft.world.phys.Vec3;
 
+import java.lang.reflect.Field;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.UUID;
 
 @EventBusSubscriber(modid = OldSchoolLevels.MODID)
 public class LevelingHandler {
+
+    private static final Map<UUID, Integer> SPRINT_TIMERS = new HashMap<>();
+    private static final Map<UUID, Integer> SPRINT_GRACE_TIMERS = new HashMap<>();
 
     @SubscribeEvent
     public static void onPlayerLogin(PlayerLoggedInEvent event) {
@@ -44,6 +59,8 @@ public class LevelingHandler {
             // Force sync magic data to client on join
             player.syncData(ModAttachments.ACTIVE_SPELL.get());
             player.syncData(ModAttachments.TELEPORT_LOCATIONS.get());
+            player.syncData(ModAttachments.STAMINA.get());
+            SkillAttributeHandler.refreshAttributes(player);
         }
     }
 
@@ -58,6 +75,108 @@ public class LevelingHandler {
                 event.setAmount(event.getAmount() * 2);
             }
             player.setData(ModAttachments.IS_CRITICAL, isCrit);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onPlayerTick(PlayerTickEvent.Pre event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+
+        float currentStamina = player.getData(ModAttachments.STAMINA.get());
+        SkillData data = player.getData(ModAttachments.SKILLS.get());
+        int level = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MOBILITY));
+        float maxStamina = RequirementUtils.getMaxStamina(level);
+        float oldStamina = currentStamina;
+        
+        // Custom movement tracking using the LAST_POS attachment
+        Vec3 currentPos = player.position();
+        Vec3 lastPos = player.getData(ModAttachments.LAST_POS.get());
+        double distSq = currentPos.distanceToSqr(lastPos.x, lastPos.y, lastPos.z);
+        
+        boolean isMoving = distSq > 0.0001; 
+        boolean isSprinting = player.isSprinting() && isMoving && !player.getAbilities().flying;
+        
+        // Update position for next tick
+        player.setData(ModAttachments.LAST_POS.get(), currentPos);
+
+        if (isSprinting) {
+            SPRINT_GRACE_TIMERS.put(player.getUUID(), 0); // Reset grace period while running
+
+            // 1. Consuming Stamina
+            // 0.25f gives ~20 seconds of run time at Level 1 (100 stamina)
+            currentStamina = Math.max(0, currentStamina - 0.25f);
+            if (currentStamina <= 0) {
+                player.setSprinting(false);
+            }
+
+            // 2. XP Logic
+            int timer = SPRINT_TIMERS.getOrDefault(player.getUUID(), 0) + 1;
+            if (timer >= 60) { // Every 3 seconds
+                // Scaled XP: 5 base + roughly 10% of level. (Lvl 1 = 5xp, Lvl 90 = 14xp)
+                awardXp(player, Skill.MOBILITY, 5 + (level / 10));
+                timer = 0;
+            }
+            SPRINT_TIMERS.put(player.getUUID(), timer);
+        } else {
+            // 3. Recharging Stamina
+            int grace = SPRINT_GRACE_TIMERS.getOrDefault(player.getUUID(), 0) + 1;
+            SPRINT_GRACE_TIMERS.put(player.getUUID(), grace);
+
+            // Only stop XP and start recharge after 10 ticks (0.5s) of not sprinting/moving
+            if (grace > 10) {
+                if (currentStamina < maxStamina) {
+                    currentStamina = Math.min(maxStamina, currentStamina + 0.6f);
+                }
+                SPRINT_TIMERS.remove(player.getUUID());
+            }
+        }
+
+        // Decouple hunger from continuous movement (Sprinting)
+        if (isSprinting) {
+            resetExhaustion(player.getFoodData());
+        }
+
+        if (currentStamina != oldStamina) {
+            player.setData(ModAttachments.STAMINA.get(), currentStamina);
+            player.syncData(ModAttachments.STAMINA.get());
+        }
+    }
+
+    @SubscribeEvent
+    public static void onLivingJump(LivingEvent.LivingJumpEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            SkillData data = player.getData(ModAttachments.SKILLS.get());
+            int level = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MOBILITY));
+
+            // 1. Consume Stamina for jumping (costs 4.0 points)
+            float currentStamina = player.getData(ModAttachments.STAMINA.get());
+            player.setData(ModAttachments.STAMINA.get(), Math.max(0, currentStamina - 4.0f));
+            player.syncData(ModAttachments.STAMINA.get());
+
+            // Negate vanilla jump exhaustion immediately
+            resetExhaustion(player.getFoodData());
+
+            // 2. Award Mobility XP for jumping
+            awardXp(player, Skill.MOBILITY, 2 + (level / 10));
+
+            // 3. Apply Mobility Jump Boost
+            float boost = RequirementUtils.getJumpBoost(level);
+            if (boost > 0) {
+                Vec3 delta = player.getDeltaMovement();
+                player.setDeltaMovement(delta.x, delta.y * (1.0f + boost), delta.z);
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onLivingFall(LivingFallEvent event) {
+        if (event.getEntity() instanceof Player player) {
+            SkillData data = player.getData(ModAttachments.SKILLS.get());
+            int level = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MOBILITY));
+            float reduction = RequirementUtils.getFallReduction(level);
+            
+            float newDamage = event.getDamageMultiplier() * (1.0f - reduction);
+            event.setDamageMultiplier(Math.max(0, newDamage));
         }
     }
 
@@ -200,8 +319,24 @@ public class LevelingHandler {
                 PacketDistributor.sendToPlayer(victim, new DamageNumberPayload(
                         victim.getX(), victim.getY(), victim.getZ(), incomingDmg, false, true
                 ));
+
+                // Award Mobility XP based on fall damage received
+                if (event.getSource().is(net.minecraft.world.damagesource.DamageTypes.FALL)) {
+                    // Higher level players get less damage, but XP is based on "raw" impact to remain fair
+                    long fallXp = Math.round(incomingDmg * 12); 
+                    awardXp(victim, Skill.MOBILITY, fallXp);
+                }
             }
         }
+    }
+
+    @SubscribeEvent
+    public static void onLivingDrops(LivingDropsEvent event) {
+        // Remove vanilla arrows, tipped arrows (Weakness, etc), and spectral arrows from mob drops
+        event.getDrops().removeIf(itemEntity -> {
+            ItemStack stack = itemEntity.getItem();
+            return stack.is(Items.ARROW) || stack.is(Items.TIPPED_ARROW) || stack.is(Items.SPECTRAL_ARROW) || stack.is(Items.BOW) || stack.is(Items.CROSSBOW);
+        });
     }
 
     @SubscribeEvent
@@ -330,6 +465,9 @@ public class LevelingHandler {
 
         // Check for unlocks on level up
         if (newLvl > oldLvl) {
+            // Celebratory Firework Sound
+            player.level().playSound(null, player.blockPosition(), SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.PLAYERS, 1.0f, 1.0f);
+
             List<RequirementUtils.UnlockInfo> unlocks = RequirementUtils.getUnlocksForSkill(skill);
             for (RequirementUtils.UnlockInfo unlock : unlocks) {
                 if (unlock.level() == newLvl) {
@@ -484,5 +622,20 @@ public class LevelingHandler {
                          path.contains("diamond") || path.contains("netherite") || path.contains("copper");
                          
         return isMetal && (isArmor || isTools);
+    }
+
+    /**
+     * World-class workaround for missing setExhaustion API.
+     * Uses reflection to reset the private exhaustionLevel field in FoodData.
+     */
+    private static void resetExhaustion(FoodData data) {
+        try {
+            // Note: In a production environment, you might want to cache this Field object for performance.
+            Field field = FoodData.class.getDeclaredField("exhaustionLevel");
+            field.setAccessible(true);
+            field.set(data, 0.0f);
+        } catch (Exception e) {
+            // If reflection fails (e.g. field name changed in a future update), the system fails gracefully
+        }
     }
 }

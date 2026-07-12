@@ -57,6 +57,14 @@ public class SkillAttributeHandler {
             // Add the difference to current health to prevent hearts from starting empty
             player.setHealth(currentHealth + (float)(newMaxHealth - oldMaxHealth));
         }
+
+        AttributeInstance speed = player.getAttribute(Attributes.MOVEMENT_SPEED);
+        if (speed != null) {
+            speed.removeModifier(Identifier.fromNamespaceAndPath(OldSchoolLevels.MODID, "mobility_speed"));
+            int level = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MOBILITY));
+            double bonus = RequirementUtils.getMovementSpeedBonus(level);
+            speed.addTransientModifier(new AttributeModifier(Identifier.fromNamespaceAndPath(OldSchoolLevels.MODID, "mobility_speed"), bonus, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+        }
     }
 
     private static void applyModifier(ServerPlayer player, net.minecraft.core.Holder<net.minecraft.world.entity.ai.attributes.Attribute> attribute, Identifier id, double amount) {

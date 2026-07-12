@@ -22,7 +22,8 @@ public enum Skill {
     FISHING("Fishing", () -> Items.FISHING_ROD, 0),
     COOKING("Cooking", () -> Items.BREAD, 0),
     ARCANA("Arcana", ModItems.BLANK_SIGIL, 0),
-    MAGIC("Magic", () -> ModItems.AIR_SIGIL.get(), 0, Identifier.withDefaultNamespace("textures/block/fire_0.png"));
+    MAGIC("Magic", () -> ModItems.AIR_SIGIL.get(), 0, Identifier.withDefaultNamespace("textures/block/fire_0.png")),
+    MOBILITY("Mobility", () -> Items.LEATHER_BOOTS, 0);
 
     private final String displayName;
     private final Supplier<Item> itemSupplier;

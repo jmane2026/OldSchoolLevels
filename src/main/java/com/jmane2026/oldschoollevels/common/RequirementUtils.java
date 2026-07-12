@@ -41,8 +41,10 @@ public class RequirementUtils {
         String path = BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath();
         if (!isArmor(path)) return 1;
 
+        if (path.contains("leather")) return 1;
         if (path.contains("copper")) return 5;
-        if (path.contains("iron")) return 15;
+        if (path.contains("chainmail")) return 15;
+        if (path.contains("iron")) return 30;
         if (path.contains("gold")) return 40;
         if (path.contains("diamond")) return 65;
         if (path.contains("netherite")) return 85;
@@ -54,7 +56,7 @@ public class RequirementUtils {
         if (!isTool(path) && !path.contains("sword") && !path.contains("_knife")) return 1;
 
         if (path.contains("copper")) return 5;
-        if (path.contains("iron")) return 15;
+        if (path.contains("iron")) return 30;
         if (path.contains("gold")) return 40;
         if (path.contains("diamond")) return 65;
         if (path.contains("netherite")) return 85;
@@ -75,7 +77,8 @@ public class RequirementUtils {
         if (path.contains("gold_ore")) return 40;
 
         if (path.contains("copper")) return 5;
-        if (path.contains("iron")) return 15;
+        if (path.contains("chainmail")) return 15;
+        if (path.contains("iron")) return 30;
         if (path.contains("gold")) return 40;
         if (path.contains("diamond")) return 65;
         if (path.contains("netherite")) return 85;
@@ -148,6 +151,22 @@ public class RequirementUtils {
         if (path.contains("cherry")) return 85;
 
         return 1;
+    }
+
+    public static float getMovementSpeedBonus(int level) {
+        return (level - 1) * 0.01f; // 1% faster per level
+    }
+
+    public static float getJumpBoost(int level) {
+        return (level - 1) * 0.015f; // ~1.5% higher per level
+    }
+
+    public static float getFallReduction(int level) {
+        return (level - 1) * 0.01f; // 1% reduction per level
+    }
+
+    public static float getMaxStamina(int level) {
+        return 100.0f + ((level - 1) * 2.0f); // +2 Max Stamina per level
     }
 
     public static float getArrowDamage(String path) {
@@ -234,6 +253,7 @@ public class RequirementUtils {
             case FLETCHING, RANGED -> populateArcheryUnlocks(unlocks);
             case ARCANA -> populateArcanaUnlocks(unlocks);
             case MAGIC -> populateMagicUnlocks(unlocks);
+            case MOBILITY -> {}
         }
         return unlocks;
     }
@@ -319,15 +339,17 @@ public class RequirementUtils {
 
     private static void populateAttackUnlocks(List<UnlockInfo> unlocks) {
         unlocks.add(new UnlockInfo(5, "Copper Weapons/Tools", new ItemStack(Items.STONE_SWORD)));
-        unlocks.add(new UnlockInfo(15, "Iron Weapons/Tools", new ItemStack(Items.IRON_SWORD)));
+        unlocks.add(new UnlockInfo(30, "Iron Weapons/Tools", new ItemStack(Items.IRON_SWORD)));
         unlocks.add(new UnlockInfo(40, "Gold Weapons/Tools", new ItemStack(Items.GOLDEN_SWORD)));
         unlocks.add(new UnlockInfo(65, "Diamond Weapons/Tools", new ItemStack(Items.DIAMOND_SWORD)));
         unlocks.add(new UnlockInfo(85, "Netherite Weapons/Tools", new ItemStack(Items.NETHERITE_SWORD)));
     }
 
     private static void populateDefenseUnlocks(List<UnlockInfo> unlocks) {
+        unlocks.add(new UnlockInfo(1, "Leather Armor", new ItemStack(Items.LEATHER_CHESTPLATE)));
         unlocks.add(new UnlockInfo(5, "Copper Armor", new ItemStack(Items.COPPER_INGOT)));
-        unlocks.add(new UnlockInfo(15, "Iron Armor", new ItemStack(Items.IRON_CHESTPLATE)));
+        unlocks.add(new UnlockInfo(15, "Chainmail Armor", new ItemStack(Items.CHAINMAIL_CHESTPLATE)));
+        unlocks.add(new UnlockInfo(30, "Iron Armor", new ItemStack(Items.IRON_CHESTPLATE)));
         unlocks.add(new UnlockInfo(40, "Gold Armor", new ItemStack(Items.GOLDEN_CHESTPLATE)));
         unlocks.add(new UnlockInfo(65, "Diamond Armor", new ItemStack(Items.DIAMOND_CHESTPLATE)));
         unlocks.add(new UnlockInfo(85, "Netherite Armor", new ItemStack(Items.NETHERITE_CHESTPLATE)));
@@ -335,9 +357,11 @@ public class RequirementUtils {
 
     private static void populateSmithingUnlocks(List<UnlockInfo> unlocks) {
         unlocks.add(new UnlockInfo(1, "Blank Sigils", new ItemStack(ModItems.BLANK_SIGIL.get())));
-        unlocks.add(new UnlockInfo(5, "Copper Smelting/Craft", new ItemStack(Items.COPPER_INGOT)));
-        unlocks.add(new UnlockInfo(15, "Iron Smelting/Craft", new ItemStack(Items.IRON_INGOT)));
-        unlocks.add(new UnlockInfo(40, "Gold Smelting/Craft", new ItemStack(Items.GOLD_INGOT)));
+        unlocks.add(new UnlockInfo(5, "Copper Smelting/Smithing", new ItemStack(Items.COPPER_INGOT)));
+        unlocks.add(new UnlockInfo(15, "Iron Smelting", new ItemStack(Items.IRON_INGOT)));
+        unlocks.add(new UnlockInfo(15, "Chainmail Smithing", new ItemStack(Items.CHAINMAIL_CHESTPLATE)));
+        unlocks.add(new UnlockInfo(30, "Iron Smithing", new ItemStack(Items.IRON_CHESTPLATE)));
+        unlocks.add(new UnlockInfo(40, "Gold Smelting/Smithing", new ItemStack(Items.GOLD_INGOT)));
         unlocks.add(new UnlockInfo(85, "Netherite Smithing", new ItemStack(Items.NETHERITE_SCRAP)));
     }
 

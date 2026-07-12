@@ -44,7 +44,6 @@ import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 
 import java.util.*;
-import java.util.logging.Level;
 
 import static net.minecraft.core.registries.Registries.ENCHANTMENT;
 
@@ -327,7 +326,7 @@ public class MagicHandler {
         int y = mc.getWindow().getGuiScaledHeight() - 19;
 
         graphics.fill(x - 2, y - 2, x + 18, y + 18, 0x88000000);
-        graphics.outline(x - 2, y - 2, 20, 20, 0xFFFFFFFF);
+        graphics.outline(x - 2, y - 2, 20, 20, 0xFF373737);
 
         // Render Custom PNG Icon
         graphics.blit(RenderPipelines.GUI_TEXTURED_PREMULTIPLIED_ALPHA, active.getIconTexture(), x, y, 0.0f, 0.0f, 16, 16, 32, 32, 32, 32, -1);
@@ -352,7 +351,6 @@ public class MagicHandler {
         }
         if (minCasts == Integer.MAX_VALUE) minCasts = 0;
 
-        // Format string with OSRS-style suffixes (k/m) to save space
         String castStr;
         int color = 0xFFFFFFFF; // Default White
 
@@ -364,7 +362,7 @@ public class MagicHandler {
         }
 
         // Render the cast count string in the bottom-right of the icon area
-        int textX = x + 17 - mc.font.width(castStr);
+        int textX = x + 16 - mc.font.width(castStr);
         int textY = y + 8; // Shifted up to prevent cutoff
 
         // Render 4-way black outline for better contrast

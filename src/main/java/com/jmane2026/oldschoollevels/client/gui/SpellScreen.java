@@ -3,6 +3,7 @@ package com.jmane2026.oldschoollevels.client.gui;
 import com.jmane2026.oldschoollevels.common.Spell;
 import com.jmane2026.oldschoollevels.common.Skill;
 import com.jmane2026.oldschoollevels.common.SkillData;
+import com.jmane2026.oldschoollevels.common.items.SigilPouchItem;
 import com.jmane2026.oldschoollevels.core.ModAttachments;
 import com.jmane2026.oldschoollevels.util.ExperienceUtils;
 import net.minecraft.client.Minecraft;
@@ -71,16 +72,33 @@ public class SpellScreen extends Screen {
         int magicLevel = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MAGIC));
         Spell activeSpell = mc.player.getData(ModAttachments.ACTIVE_SPELL.get());
 
+        // Find sigil pouch once per frame for cost checks
+        ItemStack pouch = ItemStack.EMPTY;
+        for (ItemStack s : mc.player.getInventory().getNonEquipmentItems()) {
+            if (s.getItem() instanceof SigilPouchItem) {
+                pouch = s;
+                break;
+            }
+        }
+
         int currentX = x + MARGIN;
         int currentY = y + 22;
         Spell hoveredSpell = null;
 
         for (Spell spell : Spell.values()) {
+            final ItemStack finalPouch = pouch;
+
             boolean isMouseOver = mouseX >= currentX && mouseX < currentX + ICON_SIZE &&
                     mouseY >= currentY && mouseY < currentY + ICON_SIZE;
 
             boolean canCast = magicLevel >= spell.getRequiredMagicLevel();
-            boolean hasCosts = spell.getCosts().stream().allMatch(c -> mc.player.getInventory().countItem(c.item().get()) >= c.amount());
+            boolean hasCosts = spell.getCosts().stream().allMatch(c -> {
+                int owned = mc.player.getInventory().countItem(c.item().get());
+                if (!finalPouch.isEmpty()) {
+                    owned += SigilPouchItem.getSigilCount(finalPouch, c.item().get());
+                }
+                return owned >= c.amount();
+            });
 
             // 1. Highlight ACTIVE spell in Yellow
             if (spell.equals(activeSpell)) {
@@ -108,7 +126,7 @@ public class SpellScreen extends Screen {
         }
 
         if (hoveredSpell != null) {
-            renderSpellTooltip(graphics, hoveredSpell, mouseX, mouseY, magicLevel, mc.player);
+            renderSpellTooltip(graphics, hoveredSpell, mouseX, mouseY, magicLevel, mc.player, pouch);
         }
     }
 
@@ -119,7 +137,7 @@ public class SpellScreen extends Screen {
         graphics.outline(x, y, PANEL_WIDTH, PANEL_HEIGHT, 0xFFFFFFFF);
     }
 
-    private void renderSpellTooltip(GuiGraphicsExtractor graphics, Spell spell, int mouseX, int mouseY, int magicLevel, Player player) {
+    private void renderSpellTooltip(GuiGraphicsExtractor graphics, Spell spell, int mouseX, int mouseY, int magicLevel, Player player, ItemStack pouch) {
         List<Component> lines = new ArrayList<>();
         lines.add(spell.getNameComponent().copy().withStyle(net.minecraft.ChatFormatting.GOLD));
         lines.add(Component.literal("Required Magic: " + spell.getRequiredMagicLevel()).withStyle(
@@ -141,6 +159,10 @@ public class SpellScreen extends Screen {
 
         for (Spell.SpellCost cost : spell.getCosts()) {
             int owned = player.getInventory().countItem(cost.item().get());
+            if (!pouch.isEmpty()) {
+                owned += SigilPouchItem.getSigilCount(pouch, cost.item().get());
+            }
+            
             boolean enough = owned >= cost.amount();
 
             graphics.item(new ItemStack(cost.item().get()), iconX, iconY);
@@ -168,15 +190,27 @@ public class SpellScreen extends Screen {
             int curX = x + MARGIN;
             int curY = y + 22;
 
+            ItemStack pouch = ItemStack.EMPTY;
+            for (ItemStack s : mc.player.getInventory().getNonEquipmentItems()) {
+                if (s.getItem() instanceof SigilPouchItem) {
+                    pouch = s;
+                    break;
+                }
+            }
+
             SkillData data = mc.player.getData(ModAttachments.SKILLS.get());
             int magicLevel = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MAGIC));
 
             for (Spell spell : Spell.values()) {
+                final ItemStack finalPouch = pouch;
                 if (mouseX >= curX && mouseX < curX + ICON_SIZE && mouseY >= curY && mouseY < curY + ICON_SIZE) {
 
                     boolean canCast = magicLevel >= spell.getRequiredMagicLevel();
-                    boolean hasCosts = spell.getCosts().stream().allMatch(c ->
-                            mc.player.getInventory().countItem(c.item().get()) >= c.amount());
+                    boolean hasCosts = spell.getCosts().stream().allMatch(c -> {
+                        int owned = mc.player.getInventory().countItem(c.item().get());
+                        if (!finalPouch.isEmpty()) owned += SigilPouchItem.getSigilCount(finalPouch, c.item().get());
+                        return owned >= c.amount();
+                    });
 
                     if (canCast && hasCosts) {
                         ClientPacketDistributor.sendToServer(new SelectSpellPayload(spell));

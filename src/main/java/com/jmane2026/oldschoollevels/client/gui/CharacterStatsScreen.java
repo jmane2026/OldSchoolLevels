@@ -1,6 +1,7 @@
 package com.jmane2026.oldschoollevels.client.gui;
 
 import com.jmane2026.oldschoollevels.common.CombatStyle;
+import com.jmane2026.oldschoollevels.common.RequirementUtils;
 import com.jmane2026.oldschoollevels.common.Skill;
 import com.jmane2026.oldschoollevels.common.SkillData;
 import com.jmane2026.oldschoollevels.core.ModAttachments;
@@ -110,9 +111,13 @@ public class CharacterStatsScreen extends Screen {
         renderStat(graphics, "Health:", getLifeBonus(data), startX + 15, combatY + 42);
         renderStat(graphics, "Ranged Dmg:", getRangedBonus(data), startX + 15, combatY + 52);
         renderStat(graphics, "Magic Bonus:", getMagicBonus(data), startX + 15, combatY + 62);
+        
+        int mobilityY = combatY + 72;
+        renderStat(graphics, "Move Speed:", String.format("+%d%%", ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MOBILITY)) - 1), startX + 15, mobilityY);
+        renderStat(graphics, "Max Stamina:", String.format("%.0f", RequirementUtils.getMaxStamina(ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MOBILITY)))), startX + 15, mobilityY + 10);
 
         // Gathering Section
-        int gatherY = combatY + 74;
+        int gatherY = mobilityY + 22;
         graphics.text(this.font, "Gathering Bonuses:", startX + 10, gatherY, 0xFFBBBBBB);
 
         int miningLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MINING));
