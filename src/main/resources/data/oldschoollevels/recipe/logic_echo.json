@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "A": "minecraft:amethyst_shard",
+    "B": "oldschoollevels:blank_sigil",
+    "D": "minecraft:diamond",
+    "P": "minecraft:ender_pearl"
+  },
+  "pattern": [
+    "BDB",
+    "APA",
+    "BDB"
+  ],
+  "result": {
+    "count": 1,
+    "id": "oldschoollevels:logic_echo"
+  }
+}

@@ -3,11 +3,16 @@ package com.jmane2026.oldschoollevels.core;
 import com.jmane2026.oldschoollevels.OldSchoolLevels;
 import com.jmane2026.oldschoollevels.common.CombatStyle;
 import com.jmane2026.oldschoollevels.common.SkillData;
+import com.jmane2026.oldschoollevels.common.Spell;
+import com.jmane2026.oldschoollevels.common.TeleportLocation;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Supplier;
 
 public class ModAttachments {
@@ -34,5 +39,32 @@ public class ModAttachments {
     public static final Supplier<AttachmentType<Boolean>> IS_CRITICAL = ATTACHMENT_TYPES.register(
             "is_critical",
             () -> AttachmentType.builder(() -> false).build()
+    );
+
+    public static final Supplier<AttachmentType<BlockPos>> ECHO_TARGET = ATTACHMENT_TYPES.register(
+            "echo_target",
+            () -> AttachmentType.builder(() -> BlockPos.ZERO)
+                    .serialize(BlockPos.CODEC.fieldOf("pos")) // Fixed: Satisfies copyOnDeath requirement
+                    .sync(BlockPos.STREAM_CODEC)             // Fixed: Enables syncing to the HUD
+                    .copyOnDeath()
+                    .build()
+    );
+
+    public static final Supplier<AttachmentType<Spell>> ACTIVE_SPELL = ATTACHMENT_TYPES.register(
+            "active_spell",
+            () -> AttachmentType.builder(() -> Spell.AIR_BLAST)
+                    .serialize(Spell.CODEC.fieldOf("active_spell"), data -> true)
+                    .sync(Spell.STREAM_CODEC)
+                    .copyOnDeath()
+                    .build()
+    );
+
+    public static final Supplier<AttachmentType<List<TeleportLocation>>> TELEPORT_LOCATIONS = ATTACHMENT_TYPES.register(
+            "teleport_locations",
+            () -> AttachmentType.builder(() -> (List<TeleportLocation>) new ArrayList<TeleportLocation>())
+                    .serialize(TeleportLocation.CODEC.listOf().fieldOf("locations"))
+                    .sync(ByteBufCodecs.collection(ArrayList::new, TeleportLocation.STREAM_CODEC))
+                    .copyOnDeath()
+                    .build()
     );
 }

@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "half=lower": {
+      "model": "oldschoollevels:block/magic_portal_bottom"
+    },
+    "half=upper": {
+      "model": "oldschoollevels:block/magic_portal_top"
+    }
+  }
+}

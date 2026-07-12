@@ -2,10 +2,12 @@ package com.jmane2026.oldschoollevels.client.gui;
 
 import com.jmane2026.oldschoollevels.common.RequirementUtils;
 import com.jmane2026.oldschoollevels.common.Skill;
+import com.jmane2026.oldschoollevels.common.Spell;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 import java.util.List;
@@ -81,7 +83,24 @@ public class SkillUnlocksScreen extends Screen {
             if (idx >= unlocks.size()) break;
 
             RequirementUtils.UnlockInfo unlock = unlocks.get(idx);
-            graphics.item(unlock.icon(), startX + 5, yPos);
+            
+            // Logic to render actual Spell PNGs if this is the Magic skill
+            boolean renderedCustom = false;
+            if (this.skill == Skill.MAGIC) {
+                for (Spell spell : Spell.values()) {
+                    if (unlock.description().equals(spell.getDisplayName())) {
+                        graphics.blit(RenderPipelines.GUI_TEXTURED, spell.getIconTexture(), 
+                                startX + 5, yPos, 0.0f, 0.0f, 16, 16, 32, 32, 32, 32, -1);
+                        renderedCustom = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!renderedCustom) {
+                graphics.item(unlock.icon(), startX + 5, yPos);
+            }
+
             String lvlStr = String.format("Lvl %02d:", unlock.level());
             
             graphics.text(this.font, lvlStr, startX + 25, yPos + 4, 0xFFFFFFFF);

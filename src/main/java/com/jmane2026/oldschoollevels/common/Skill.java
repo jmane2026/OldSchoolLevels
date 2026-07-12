@@ -1,32 +1,43 @@
 package com.jmane2026.oldschoollevels.common;
 
+import com.jmane2026.oldschoollevels.core.ModItems;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.level.ItemLike;
+
+import java.util.function.Supplier;
 
 public enum Skill {
-    ATTACK("Attack", Items.IRON_SWORD, 0),
-    DEFENSE("Defense", Items.IRON_CHESTPLATE, 0),
-    STRENGTH("Strength", Items.TOTEM_OF_UNDYING, 0),
-    RANGED("Ranged", Items.BOW, 0),
-    LIFE("Life", Items.APPLE, 1154), // Level 10 XP
-    MINING("Mining", Items.IRON_PICKAXE, 0),
-    SMITHING("Smithing", Items.ANVIL, 0),
-    WOODCUTTING("Wood Cutting", Items.OAK_LOG, 0),
-    FLETCHING("Fletching", Items.ARROW, 0),
-    FISHING("Fishing", Items.FISHING_ROD, 0),
-    COOKING("Cooking", Items.BREAD, 0);
+    ATTACK("Attack", () -> Items.IRON_SWORD, 0),
+    DEFENSE("Defense", () -> Items.IRON_CHESTPLATE, 0),
+    STRENGTH("Strength", () -> Items.TOTEM_OF_UNDYING, 0),
+    RANGED("Ranged", () -> Items.BOW, 0),
+    LIFE("Life", () -> Items.APPLE, 1154, Identifier.withDefaultNamespace("hud/heart/full")), // Level 10 XP
+    MINING("Mining", () -> Items.IRON_PICKAXE, 0),
+    SMITHING("Smithing", () -> Items.ANVIL, 0),
+    WOODCUTTING("Wood Cutting", () -> Items.OAK_LOG, 0),
+    FLETCHING("Fletching", ModItems.FLINT_ARROW, 0),
+    FISHING("Fishing", () -> Items.FISHING_ROD, 0),
+    COOKING("Cooking", () -> Items.BREAD, 0),
+    ARCANA("Arcana", ModItems.BLANK_SIGIL, 0),
+    MAGIC("Magic", () -> ModItems.AIR_SIGIL.get(), 0, Identifier.withDefaultNamespace("textures/block/fire_0.png"));
 
     private final String displayName;
-    private final Item item;
+    private final Supplier<Item> itemSupplier;
     private final long defaultXp;
+    private final Identifier spriteIcon;
 
-    Skill(String displayName, Item item, long defaultXp) {
+    Skill(String displayName, Supplier<Item> itemSupplier, long defaultXp) {
+        this(displayName, itemSupplier, defaultXp, null);
+    }
+
+    Skill(String displayName, Supplier<Item> itemSupplier, long defaultXp, Identifier spriteIcon) {
         this.displayName = displayName;
-        this.item = item;
+        this.itemSupplier = itemSupplier;
         this.defaultXp = defaultXp;
+        this.spriteIcon = spriteIcon;
     }
 
     public String getDisplayName() {
@@ -34,7 +45,11 @@ public enum Skill {
     }
 
     public ItemStack getIcon() {
-        return new ItemStack(this.item);
+        return new ItemStack(this.itemSupplier.get());
+    }
+
+    public Identifier getSpriteIcon() {
+        return spriteIcon;
     }
 
     public Component getNameComponent() {

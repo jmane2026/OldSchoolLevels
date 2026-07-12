@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "A": "minecraft:amethyst_shard",
+    "B": "oldschoollevels:blank_sigil",
+    "N": "minecraft:blaze_powder",
+    "P": "minecraft:ender_pearl"
+  },
+  "pattern": [
+    "BNB",
+    "APA",
+    "BNB"
+  ],
+  "result": {
+    "count": 1,
+    "id": "oldschoollevels:fire_echo"
+  }
+}

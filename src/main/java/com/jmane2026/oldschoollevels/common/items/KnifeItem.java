@@ -41,7 +41,8 @@ public class KnifeItem extends Item {
             if (remainder.getDamageValue() >= remainder.getMaxDamage()) {
                 return null;
             }
-            return remainder.getCraftingRemainder();
+            // Return the damaged copy as a template to stay in the crafting grid
+            return ItemStackTemplate.fromNonEmptyStack(remainder);
         }
         return null;
     }

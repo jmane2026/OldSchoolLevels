@@ -2,9 +2,9 @@ package com.jmane2026.oldschoollevels.core;
 
 import com.jmane2026.oldschoollevels.OldSchoolLevels;
 import com.jmane2026.oldschoollevels.common.items.KnifeItem;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.BowItem;
-import net.minecraft.world.item.ArrowItem;
+import com.jmane2026.oldschoollevels.common.items.EchoItem;
+import com.jmane2026.oldschoollevels.common.items.SigilPouchItem;
+import net.minecraft.world.item.*;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -47,4 +47,25 @@ public class ModItems {
     public static final DeferredItem<Item> EMERALD_ARROW_HEADS = ITEMS.registerItem("emerald_arrow_heads", Item::new, p -> p);
     public static final DeferredItem<Item> DIAMOND_ARROW_HEADS = ITEMS.registerItem("diamond_arrow_heads", Item::new, p -> p);
     public static final DeferredItem<Item> NETHERITE_ARROW_HEADS = ITEMS.registerItem("netherite_arrow_heads", Item::new, p -> p);
+
+    // Arcana Materials
+    public static final DeferredItem<Item> RAW_SIGIL = ITEMS.registerItem("raw_sigil", Item::new, p -> p);
+    public static final DeferredItem<BlockItem> SIGILIC_ORE = ITEMS.registerSimpleBlockItem(ModBlocks.SIGILIC_ORE);
+    public static final DeferredItem<Item> BLANK_SIGIL = ITEMS.registerItem("blank_sigil", Item::new, p -> p);
+
+    // Echoes (Passive Compasses)
+    public static final DeferredItem<Item> AIR_ECHO = ITEMS.registerItem("air_echo", p -> new EchoItem(p, "air_dome"), p -> p.stacksTo(1));
+    public static final DeferredItem<Item> WATER_ECHO = ITEMS.registerItem("water_echo", p -> new EchoItem(p, "water_dome"), p -> p.stacksTo(1));
+    public static final DeferredItem<Item> EARTH_ECHO = ITEMS.registerItem("earth_echo", p -> new EchoItem(p, "earth_dome"), p -> p.stacksTo(1));
+    public static final DeferredItem<Item> FIRE_ECHO = ITEMS.registerItem("fire_echo", p -> new EchoItem(p, "fire_dome"), p -> p.stacksTo(1));
+    public static final DeferredItem<Item> LOGIC_ECHO = ITEMS.registerItem("logic_echo", p -> new EchoItem(p, "air_dome"), p -> p.stacksTo(1));
+
+    // Sigils
+    public static final DeferredItem<Item> AIR_SIGIL = ITEMS.registerItem("air_sigil", Item::new, p -> p);
+    public static final DeferredItem<Item> WATER_SIGIL = ITEMS.registerItem("water_sigil", Item::new, p -> p);
+    public static final DeferredItem<Item> EARTH_SIGIL = ITEMS.registerItem("earth_sigil", Item::new, p -> p);
+    public static final DeferredItem<Item> FIRE_SIGIL = ITEMS.registerItem("fire_sigil", Item::new, p -> p);
+    public static final DeferredItem<Item> LOGIC_SIGIL = ITEMS.registerItem("logic_sigil", Item::new, p -> p);
+
+    public static final DeferredItem<SigilPouchItem> SIGIL_POUCH = ITEMS.registerItem("sigil_pouch", SigilPouchItem::new, p -> p.stacksTo(1).rarity(Rarity.EPIC));
 }

@@ -1,5 +1,6 @@
 package com.jmane2026.oldschoollevels.common;
 
+import com.jmane2026.oldschoollevels.core.ModBlocks;
 import com.jmane2026.oldschoollevels.core.ModItems;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.Item;
@@ -16,7 +17,7 @@ public class RequirementUtils {
 
     public static int getRequiredMiningLevel(Block block) {
         if (block == Blocks.STONE || block == Blocks.COBBLESTONE || block == Blocks.DEEPSLATE || block == Blocks.COBBLED_DEEPSLATE) return 1;
-        if (block == Blocks.COAL_ORE || block == Blocks.DEEPSLATE_COAL_ORE) return 1;
+        if (block == Blocks.COAL_ORE || block == Blocks.DEEPSLATE_COAL_ORE || block == ModBlocks.SIGILIC_ORE.get()) return 1;
         if (block == Blocks.COPPER_ORE || block == Blocks.DEEPSLATE_COPPER_ORE) return 5;
         if (block == Blocks.IRON_ORE || block == Blocks.DEEPSLATE_IRON_ORE) return 15;
         if (block == Blocks.LAPIS_ORE || block == Blocks.DEEPSLATE_LAPIS_ORE || block == Blocks.REDSTONE_ORE || block == Blocks.DEEPSLATE_REDSTONE_ORE) return 30;
@@ -27,7 +28,6 @@ public class RequirementUtils {
     }
 
     public static int getRequiredWoodcuttingLevel(Block block) {
-        if (block == Blocks.OAK_LOG || block == Blocks.OAK_WOOD) return 1;
         if (block == Blocks.SPRUCE_LOG || block == Blocks.SPRUCE_WOOD || block == Blocks.BIRCH_LOG || block == Blocks.BIRCH_WOOD) return 15;
         if (block == Blocks.JUNGLE_LOG || block == Blocks.JUNGLE_WOOD) return 30;
         if (block == Blocks.ACACIA_LOG || block == Blocks.ACACIA_WOOD) return 45;
@@ -79,6 +79,26 @@ public class RequirementUtils {
         if (path.contains("gold")) return 40;
         if (path.contains("diamond")) return 65;
         if (path.contains("netherite")) return 85;
+        return 1;
+    }
+
+    public static int getRequiredArcanaLevel(ItemStack stack) {
+        String path = BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath();
+
+        // Echoes are level 1 to ensure the skill is accessible
+        if (path.contains("_echo")) {
+            return 1;
+        }
+
+        // Sigils (Rune equivalents) - Conversion level
+        if (path.contains("_sigil")) {
+            if (path.contains("air")) return 1;
+            if (path.contains("mind")) return 5;
+            if (path.contains("water")) return 10;
+            if (path.contains("earth")) return 20;
+            if (path.contains("logic")) return 45;
+            if (path.contains("fire")) return 35;
+        }
         return 1;
     }
 
@@ -212,12 +232,8 @@ public class RequirementUtils {
             case SMITHING -> populateSmithingUnlocks(unlocks);
             case COOKING -> populateCookingUnlocks(unlocks);
             case FLETCHING, RANGED -> populateArcheryUnlocks(unlocks);
-            case LIFE -> {
-                unlocks.add(new UnlockInfo(11, "Health Bonus (+1 HP)", new ItemStack(Items.APPLE)));
-                unlocks.add(new UnlockInfo(13, "Health Bonus (+2 HP)", new ItemStack(Items.GOLDEN_APPLE)));
-                unlocks.add(new UnlockInfo(15, "Health Bonus (+3 HP)", new ItemStack(Items.ENCHANTED_GOLDEN_APPLE)));
-                unlocks.add(new UnlockInfo(20, "Health Bonus (+5 HP)", new ItemStack(Items.GLISTERING_MELON_SLICE)));
-            }
+            case ARCANA -> populateArcanaUnlocks(unlocks);
+            case MAGIC -> populateMagicUnlocks(unlocks);
         }
         return unlocks;
     }
@@ -247,9 +263,34 @@ public class RequirementUtils {
         unlocks.add(new UnlockInfo(85, "Netherite Arrow Heads", new ItemStack((ItemLike) ModItems.NETHERITE_ARROW_HEADS)));
     }
 
+    private static void populateArcanaUnlocks(List<UnlockInfo> unlocks) {
+        unlocks.add(new UnlockInfo(1, "Air Sigils", new ItemStack(ModItems.AIR_SIGIL.get())));
+        unlocks.add(new UnlockInfo(1, "Echoes", new ItemStack(ModItems.AIR_ECHO.get())));
+        unlocks.add(new UnlockInfo(10, "Water Sigils", new ItemStack(ModItems.WATER_SIGIL.get())));
+        unlocks.add(new UnlockInfo(20, "Earth Sigils", new ItemStack(ModItems.EARTH_SIGIL.get())));
+        unlocks.add(new UnlockInfo(35, "Fire Sigils", new ItemStack(ModItems.FIRE_SIGIL.get())));
+        unlocks.add(new UnlockInfo(45, "Logic Sigils", new ItemStack(ModItems.LOGIC_SIGIL.get())));
+    }
+
+    private static void populateMagicUnlocks(List<UnlockInfo> unlocks) {
+        unlocks.add(new UnlockInfo(1, "Air Blast", new ItemStack(ModItems.AIR_SIGIL.get())));
+        unlocks.add(new UnlockInfo(10, "Blink", new ItemStack(Items.ENDER_EYE)));
+        unlocks.add(new UnlockInfo(15, "Transmute Copper", new ItemStack(Items.COPPER_INGOT)));
+        unlocks.add(new UnlockInfo(20, "Spawn Teleport", new ItemStack(Items.CHORUS_FRUIT)));
+        unlocks.add(new UnlockInfo(25, "Strength", new ItemStack(Items.BLAZE_POWDER)));
+        unlocks.add(new UnlockInfo(30, "Transmute Iron", new ItemStack(Items.IRON_INGOT)));
+        unlocks.add(new UnlockInfo(40, "Water Blast", new ItemStack(ModItems.WATER_SIGIL.get())));
+        unlocks.add(new UnlockInfo(50, "Teleport", new ItemStack(Items.ENDER_PEARL)));
+        unlocks.add(new UnlockInfo(55, "Telekinesis", new ItemStack(Items.ENDER_PEARL)));
+        unlocks.add(new UnlockInfo(70, "Transmute Diamond", new ItemStack(Items.DIAMOND)));
+        unlocks.add(new UnlockInfo(80, "Fire Blast", new ItemStack(ModItems.FIRE_SIGIL.get())));
+        unlocks.add(new UnlockInfo(90, "Portal", new ItemStack(Items.ENDER_EYE)));
+    }
+
     // Move existing case logic to private helpers to keep the switch clean
     private static void populateMiningUnlocks(List<UnlockInfo> unlocks) {
         unlocks.add(new UnlockInfo(1, "Stone & Coal", new ItemStack(Items.COAL)));
+        unlocks.add(new UnlockInfo(1, "Sigilic Ore", new ItemStack(ModItems.SIGILIC_ORE.get())));
         unlocks.add(new UnlockInfo(5, "Copper Ores", new ItemStack(Items.RAW_COPPER)));
         unlocks.add(new UnlockInfo(15, "Iron Ores", new ItemStack(Items.RAW_IRON)));
         unlocks.add(new UnlockInfo(30, "Lapis & Redstone", new ItemStack(Items.REDSTONE)));
@@ -293,6 +334,7 @@ public class RequirementUtils {
     }
 
     private static void populateSmithingUnlocks(List<UnlockInfo> unlocks) {
+        unlocks.add(new UnlockInfo(1, "Blank Sigils", new ItemStack(ModItems.BLANK_SIGIL.get())));
         unlocks.add(new UnlockInfo(5, "Copper Smelting/Craft", new ItemStack(Items.COPPER_INGOT)));
         unlocks.add(new UnlockInfo(15, "Iron Smelting/Craft", new ItemStack(Items.IRON_INGOT)));
         unlocks.add(new UnlockInfo(40, "Gold Smelting/Craft", new ItemStack(Items.GOLD_INGOT)));

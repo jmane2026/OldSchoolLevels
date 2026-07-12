@@ -1,15 +1,19 @@
 package com.jmane2026.oldschoollevels.common;
 
 import com.jmane2026.oldschoollevels.OldSchoolLevels;
+import com.jmane2026.oldschoollevels.common.entities.AirBlastProjectile;
+import com.jmane2026.oldschoollevels.common.items.SigilPouchItem;
 import com.jmane2026.oldschoollevels.core.ModAttachments;
+import com.jmane2026.oldschoollevels.core.ModBlocks;
+import com.jmane2026.oldschoollevels.core.ModItems;
 import com.jmane2026.oldschoollevels.network.DamageNumberPayload;
+import com.jmane2026.oldschoollevels.network.UnlockNotificationPayload;
 import com.jmane2026.oldschoollevels.network.XpGainPayload;
 import com.jmane2026.oldschoollevels.util.ExperienceUtils;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.BlockTags;
-import net.minecraft.world.entity.ItemOwner;
 import net.minecraft.world.entity.projectile.arrow.AbstractArrow;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -24,10 +28,24 @@ import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.ItemFishedEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent;
+import net.minecraft.util.TriState;
+
+import java.util.List;
 
 @EventBusSubscriber(modid = OldSchoolLevels.MODID)
 public class LevelingHandler {
+
+    @SubscribeEvent
+    public static void onPlayerLogin(PlayerLoggedInEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            // Force sync magic data to client on join
+            player.syncData(ModAttachments.ACTIVE_SPELL.get());
+            player.syncData(ModAttachments.TELEPORT_LOCATIONS.get());
+        }
+    }
 
     private static final float BASE_CRIT_CHANCE = 0.05f; // 5% chance
 
@@ -127,6 +145,14 @@ public class LevelingHandler {
                 // 3. Final scaling: 1% bonus damage per Ranged level
                 finalDamage *= (1.0f + (rangedLvl / 100.0f));
             }
+            
+            // Magic Scaling Logic
+            else if (event.getSource().getDirectEntity() instanceof AirBlastProjectile) {
+                SkillData data = player.getData(ModAttachments.SKILLS.get());
+                int magicLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MAGIC));
+                // Scaling: 1% bonus damage per level (Level 6 = +6%) to match Character Sheet
+                finalDamage *= (1.0f + (magicLvl / 100.0f));
+            }
 
             float damage = finalDamage;
 
@@ -148,6 +174,8 @@ public class LevelingHandler {
 
             if (event.getSource().getDirectEntity() instanceof AbstractArrow) {
                 awardXp(player, Skill.RANGED, combatXp);
+            } else if (event.getSource().getDirectEntity() instanceof AirBlastProjectile) {
+                awardXp(player, Skill.MAGIC, combatXp);
             } else {
                 CombatStyle style = player.getData(ModAttachments.COMBAT_STYLE);
                 switch (style) {
@@ -182,10 +210,46 @@ public class LevelingHandler {
             ItemStack item = event.getSmelting();
             if (isFood(item)) {
                 awardXp(player, Skill.COOKING, getFoodXp(item) * item.getCount());
-            } else if (item.is(Items.IRON_INGOT) || item.is(Items.GOLD_INGOT) || item.is(Items.COPPER_INGOT)) {
+            } else if (item.is(Items.COPPER_INGOT)) {
+                awardXp(player, Skill.SMITHING, 15L * item.getCount());
+            } else if (item.is(Items.IRON_INGOT)) {
                 awardXp(player, Skill.SMITHING, 25L * item.getCount());
+            } else if (item.is(Items.GOLD_INGOT)) {
+                awardXp(player, Skill.SMITHING, 40L * item.getCount());
+            } else if (item.is(ModItems.BLANK_SIGIL.get())) {
+                awardXp(player, Skill.SMITHING, 5L * item.getCount());
             } else if (item.is(Items.NETHERITE_SCRAP)) {
                 awardXp(player, Skill.SMITHING, 100L * item.getCount());
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onItemPickup(ItemEntityPickupEvent.Pre event) {
+        if (event.getPlayer() instanceof ServerPlayer player) {
+            ItemStack stack = event.getItemEntity().getItem();
+            String path = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath();
+            if (path.contains("_sigil")) {
+                for (ItemStack s : player.getInventory().getNonEquipmentItems()) {
+                    if (s.getItem() instanceof SigilPouchItem) {
+                        SigilPouchItem.addSigils(s, stack.getItem(), stack.getCount());
+                        event.getItemEntity().discard();
+                        event.setCanPickup(TriState.FALSE);
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    private static void checkPouchDivert(ServerPlayer player, ItemStack crafted) {
+        String path = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(crafted.getItem()).getPath();
+        if (!path.contains("_sigil")) return;
+        for (ItemStack s : player.getInventory().getNonEquipmentItems()) {
+            if (s.getItem() instanceof SigilPouchItem) {
+                SigilPouchItem.addSigils(s, crafted.getItem(), crafted.getCount());
+                crafted.setCount(0);
+                return;
             }
         }
     }
@@ -221,6 +285,12 @@ public class LevelingHandler {
             else if (path.contains("_bow") || item.is(Items.BOW)) {
                 awardXp(player, Skill.FLETCHING, getBowFletchXp(path));
             }
+
+            // 6. Handle Arcana Sigil Crafting
+            else if (path.contains("_sigil") && !path.contains("blank")) {
+                awardXp(player, Skill.ARCANA, 12L * count);
+                checkPouchDivert(player, item);
+            }
             
             if (isMetalGear(item)) {
                 awardXp(player, Skill.SMITHING, 50L);
@@ -248,12 +318,25 @@ public class LevelingHandler {
         }
     }
 
-    private static void awardXp(ServerPlayer player, Skill skill, long amount) {
+    public static void awardXp(ServerPlayer player, Skill skill, long amount) {
         if (amount <= 0) return;
         SkillData currentData = player.getData(ModAttachments.SKILLS);
+        
+        int oldLvl = ExperienceUtils.getLevelAtExperience(currentData.getExperience(skill));
         SkillData newData = currentData.addExperience(skill, amount);
+        int newLvl = ExperienceUtils.getLevelAtExperience(newData.getExperience(skill));
 
         player.setData(ModAttachments.SKILLS, newData);
+
+        // Check for unlocks on level up
+        if (newLvl > oldLvl) {
+            List<RequirementUtils.UnlockInfo> unlocks = RequirementUtils.getUnlocksForSkill(skill);
+            for (RequirementUtils.UnlockInfo unlock : unlocks) {
+                if (unlock.level() == newLvl) {
+                    PacketDistributor.sendToPlayer(player, new UnlockNotificationPayload(skill, newLvl, unlock.description(), unlock.icon()));
+                }
+            }
+        }
 
         // Refresh attributes if any combat-related scaling skill was increased
         if (skill == Skill.LIFE || skill == Skill.STRENGTH ||
@@ -265,6 +348,7 @@ public class LevelingHandler {
     }
 
     private static long getMiningXp(Block block) {
+        if (block == ModBlocks.SIGILIC_ORE.get()) return 5;
         if (block == Blocks.COAL_ORE || block == Blocks.DEEPSLATE_COAL_ORE) return 17;
         if (block == Blocks.IRON_ORE || block == Blocks.DEEPSLATE_IRON_ORE) return 35;
         if (block == Blocks.COPPER_ORE || block == Blocks.DEEPSLATE_COPPER_ORE) return 17;

@@ -109,9 +109,10 @@ public class CharacterStatsScreen extends Screen {
         renderStat(graphics, "Armor:", getDefBonus(data, currentStyle), startX + 15, combatY + 32);
         renderStat(graphics, "Health:", getLifeBonus(data), startX + 15, combatY + 42);
         renderStat(graphics, "Ranged Dmg:", getRangedBonus(data), startX + 15, combatY + 52);
+        renderStat(graphics, "Magic Bonus:", getMagicBonus(data), startX + 15, combatY + 62);
 
         // Gathering Section
-        int gatherY = combatY + 62;
+        int gatherY = combatY + 74;
         graphics.text(this.font, "Gathering Bonuses:", startX + 10, gatherY, 0xFFBBBBBB);
 
         int miningLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MINING));
@@ -151,7 +152,13 @@ public class CharacterStatsScreen extends Screen {
 
     private String getRangedBonus(SkillData data) {
         int lvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.RANGED));
-        return "+" + lvl + "%";
+        return String.format("+%d%%", lvl);
+    }
+
+    private String getMagicBonus(SkillData data) {
+        int lvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MAGIC));
+        // 1% per level logic: Level 6 = +6%
+        return String.format("+%d%%", lvl);
     }
 
     @Override

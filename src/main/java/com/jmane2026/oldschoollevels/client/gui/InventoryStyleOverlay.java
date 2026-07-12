@@ -25,7 +25,7 @@ public class InventoryStyleOverlay {
             Button statsButton = Button.builder(Component.empty(), (btn) -> {
                         mc.setScreen(new CharacterStatsScreen());
                     })
-                    .bounds(inv.getGuiLeft() + 77, inv.getGuiTop() + 42, 16, 16)
+                    .bounds(inv.getGuiLeft() + 77, inv.getGuiTop() + 43, 16, 16)
                     .tooltip(Tooltip.create(Component.literal("Character Sheet")))
                     .build();
 
@@ -33,9 +33,18 @@ public class InventoryStyleOverlay {
             Button skillsButton = Button.builder(Component.empty(), (btn) -> {
                         mc.setScreen(new LevelScreen(Component.literal("Skills")));
                     })
-                    .bounds(inv.getGuiLeft() + 77, inv.getGuiTop() + 24, 16, 16)
+                    .bounds(inv.getGuiLeft() + 77, inv.getGuiTop() + 25, 16, 16)
                     .tooltip(Tooltip.create(Component.literal("View Skills")))
                     .build();
+
+            // Spellbook Button - Positioned ABOVE the Skills button
+            Button spellbookButton = Button.builder(Component.empty(), b -> {
+                        Minecraft.getInstance().setScreen(new SpellScreen(Component.literal("Spells")));
+                    })
+                    .bounds(inv.getGuiLeft() + 77, inv.getGuiTop() + 7, 16, 16)
+                    .tooltip(Tooltip.create(Component.literal("Spellbook")))
+                    .build();
+            event.addListener(spellbookButton);
 
             event.addListener(statsButton);
             event.addListener(skillsButton);
@@ -46,14 +55,21 @@ public class InventoryStyleOverlay {
     public static void onScreenRender(ScreenEvent.Render.Post event) {
         if (event.getScreen() instanceof InventoryScreen inv) {
             // Draw the Netherite Helmet icon directly over the button location
-            event.getGuiGraphics().item(new ItemStack(Items.NETHERITE_HELMET), inv.getGuiLeft() + 77, inv.getGuiTop() + 42);
+            event.getGuiGraphics().item(new ItemStack(Items.NETHERITE_HELMET), inv.getGuiLeft() + 77, inv.getGuiTop() + 43);
 
             // Draw a book or experience bottle for skills
             event.getGuiGraphics().pose().pushMatrix();
             // Translate to center, scale, then render at 0,0 relative to the translated matrix
-            event.getGuiGraphics().pose().translate(inv.getGuiLeft() + 77 + 1.5f, inv.getGuiTop() + 24 + 1.5f, event.getGuiGraphics().pose());
+            event.getGuiGraphics().pose().translate(inv.getGuiLeft() + 77 + 1.5f, inv.getGuiTop() + 25 + 1.5f, event.getGuiGraphics().pose());
             event.getGuiGraphics().pose().scale(0.8f, 0.8f, event.getGuiGraphics().pose());
             event.getGuiGraphics().item(new ItemStack(Items.EXPERIENCE_BOTTLE), 0, 0);
+            event.getGuiGraphics().pose().popMatrix();
+
+            // Draw the Enchanted Book icon scaled down to 12x12
+            event.getGuiGraphics().pose().pushMatrix();
+            event.getGuiGraphics().pose().translate(inv.getGuiLeft() + 79, inv.getGuiTop() + 9, event.getGuiGraphics().pose());
+            event.getGuiGraphics().pose().scale(0.75f, 0.75f, event.getGuiGraphics().pose());
+            event.getGuiGraphics().item(new ItemStack(Items.ENCHANTED_BOOK), 0, 0);
             event.getGuiGraphics().pose().popMatrix();
         }
     }

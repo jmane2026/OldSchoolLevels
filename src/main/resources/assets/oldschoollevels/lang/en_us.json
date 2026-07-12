@@ -27,5 +27,23 @@
   "item.oldschoollevels.netherite_arrow_heads": "Netherite Arrow Heads",
   "item.oldschoollevels.netherite_knife": "Netherite Knife",
   "item.oldschoollevels.oak_bow": "Oak Bow",
-  "item.oldschoollevels.spruce_bow": "Spruce Bow"
+  "item.oldschoollevels.spruce_bow": "Spruce Bow",
+
+  "block.oldschoollevels.sigilic_ore": "Sigilic Ore",
+  "item.oldschoollevels.raw_sigil": "Raw Sigil",
+
+  "item.oldschoollevels.blank_sigil": "Blank Sigil",
+  "item.oldschoollevels.air_sigil": "Air Sigil",
+  "item.oldschoollevels.earth_sigil": "Earth Sigil",
+  "item.oldschoollevels.fire_sigil": "Fire Sigil",
+  "item.oldschoollevels.water_sigil": "Water Sigil",
+  "item.oldschoollevels.logic_sigil": "Logic Sigil",
+
+  "item.oldschoollevels.air_echo": "Air Echo",
+  "item.oldschoollevels.water_echo": "Water Echo",
+  "item.oldschoollevels.earth_echo": "Earth Echo",
+  "item.oldschoollevels.fire_echo": "Fire Echo",
+  "item.oldschoollevels.logic_echo": "Logic Echo",
+
+  "item.oldschoollevels.sigil_pouch": "Sigil Pouch"
 }

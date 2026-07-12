@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "A": "minecraft:amethyst_shard",
+    "B": "oldschoollevels:blank_sigil",
+    "I": "minecraft:iron_ingot",
+    "P": "minecraft:ender_pearl"
+  },
+  "pattern": [
+    "BIB",
+    "APA",
+    "BIB"
+  ],
+  "result": {
+    "count": 1,
+    "id": "oldschoollevels:earth_echo"
+  }
+}

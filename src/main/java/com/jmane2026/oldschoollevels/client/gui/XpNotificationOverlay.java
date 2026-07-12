@@ -4,7 +4,7 @@ import com.jmane2026.oldschoollevels.common.Skill;
 import com.jmane2026.oldschoollevels.util.ExperienceUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.network.chat.Component;
+import net.minecraft.client.renderer.RenderPipelines;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -97,7 +97,23 @@ public class XpNotificationOverlay {
             graphics.outline(startX, y, boxWidth, boxHeight, (alpha << 24) | 0x000000);
 
             // 1. Draw Icon
-            graphics.item(ticket.skill.getIcon(), startX + 2, y + 2);
+            if (ticket.skill.getSpriteIcon() != null) {
+                if (ticket.skill == Skill.MAGIC) {
+                    // Manual color calculation for alpha fade on raw texture
+                    int tint = (alpha << 24) | 0xFFFFFF;
+                    
+                    // Calculate the current animation frame (0-31)
+                    long time = mc.level != null ? mc.level.getGameTime() : 0;
+                    int frameIndex = (int) ((time / 2) % 32);
+                    int vOffset = frameIndex * 16;
+
+                    graphics.blit(RenderPipelines.GUI_TEXTURED, ticket.skill.getSpriteIcon(), startX + 2, y + 2, 0, vOffset, 16, 16, 16, 16, 16, 512, tint);
+                } else {
+                    graphics.blitSprite(RenderPipelines.GUI_TEXTURED_PREMULTIPLIED_ALPHA, ticket.skill.getSpriteIcon(), startX + 2, y + 2, 16, 16, fade);
+                }
+            } else {
+                graphics.item(ticket.skill.getIcon(), startX + 2, y + 2);
+            }
 
             // 2. Draw Skill Name (Top Left)
             String title = ticket.skill.getDisplayName();

@@ -1,0 +1,9 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "oldschoollevels:block/sigilic_ore",
+    "textures": {
+      "all": "oldschoollevels:block/sigilic_ore"
+    }
+  }
+}

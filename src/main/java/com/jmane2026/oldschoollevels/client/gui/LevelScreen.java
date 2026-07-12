@@ -7,6 +7,7 @@ import com.jmane2026.oldschoollevels.core.ModAttachments;
 import com.jmane2026.oldschoollevels.util.ExperienceUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.gui.screens.Screen;
@@ -20,11 +21,11 @@ import org.lwjgl.glfw.GLFW;
 import java.util.List;
 
 public class LevelScreen extends Screen {
-    private static final int PANEL_WIDTH = 145;
-    private static final int PANEL_HEIGHT = 210;
+    private static final int PANEL_WIDTH = 160;
+    private static final int PANEL_HEIGHT = 245;
     private static final int MARGIN = 10;
-    private static final int BOX_SIZE = 40;
-    private static final int SPACING = 4;
+    private static final int BOX_SIZE = 38;
+    private static final int SPACING = 3;
 
     public LevelScreen(Component title) {
         super(title);
@@ -70,8 +71,8 @@ public class LevelScreen extends Screen {
         // Title
         graphics.text(this.font, this.title, x + (PANEL_WIDTH / 2) - (this.font.width(this.title) / 2), y + 5, 0xFFFFFFFF);
 
-        int startX = x + 8;
-        int startY = y + 18;
+        int startX = x + 20; // Increased padding to center the grid
+        int startY = y + 20; // Pushed down to clear the title/X button
         int totalLevel = 0;
         Skill hoveredSkill = null;
         
@@ -106,15 +107,29 @@ public class LevelScreen extends Screen {
             if (skill == Skill.STRENGTH) str = level;
             if (skill == Skill.LIFE) hp = level;
             if (skill == Skill.RANGED) range = level;
+            if (skill == Skill.MAGIC) mage = level;
 
-            // Render Item Icon
-            graphics.item(skill.getIcon(), bx + (BOX_SIZE / 2) - 8, by + 4);
+            // Render Icon (Sprite or Item)
+            if (skill.getSpriteIcon() != null) {
+                if (skill == Skill.MAGIC) {
+                    // Calculate the current animation frame (0-31)
+                    long time = Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getGameTime() : 0;
+                    int frameIndex = (int) ((time / 2) % 32); // Change frame every 2 ticks
+                    int vOffset = frameIndex * 16;
+
+                    graphics.blit(RenderPipelines.GUI_TEXTURED, skill.getSpriteIcon(), bx + (BOX_SIZE / 2) - 8, by + 2, 0, vOffset, 16, 16, 16, 16, 16, 512, -1);
+                } else {
+                    graphics.blitSprite(RenderPipelines.GUI_TEXTURED_PREMULTIPLIED_ALPHA, skill.getSpriteIcon(), bx + (BOX_SIZE / 2) - 8, by + 2, 16, 16);
+                }
+            } else {
+                graphics.item(skill.getIcon(), bx + (BOX_SIZE / 2) - 8, by + 2);
+            }
 
             // Render Level Text
             String lvlStr = "Lvl: " + level + "/99";
             graphics.pose().pushMatrix();
             // Move to the horizontal center of the box and the desired Y position
-            graphics.pose().translate(bx + (BOX_SIZE / 2f), by + 30f, graphics.pose());
+            graphics.pose().translate(bx + (BOX_SIZE / 2f), by + 28f, graphics.pose());
             graphics.pose().scale(0.65f, 0.65f, graphics.pose());
             // Draw centered at 0 (which is the center of the box due to translation)
             graphics.text(this.font, lvlStr, (int) (-(this.font.width(lvlStr) / 2f)), 0, 0xFFFFFF00);
@@ -192,8 +207,8 @@ public class LevelScreen extends Screen {
 
         int x = this.width - PANEL_WIDTH - MARGIN;
         int y = this.height - PANEL_HEIGHT - MARGIN;
-        int startX = x + 8;
-        int startY = y + 18;
+        int startX = x + 20;
+        int startY = y + 20;
 
         Skill[] skills = Skill.values();
         for (int i = 0; i < skills.length; i++) {

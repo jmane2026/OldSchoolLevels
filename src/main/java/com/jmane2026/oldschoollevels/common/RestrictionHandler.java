@@ -1,15 +1,18 @@
 package com.jmane2026.oldschoollevels.common;
 
 import com.jmane2026.oldschoollevels.OldSchoolLevels;
+import com.jmane2026.oldschoollevels.common.items.EchoItem;
 import com.jmane2026.oldschoollevels.client.gui.WarningOverlay;
 import com.jmane2026.oldschoollevels.core.ModAttachments;
 import com.jmane2026.oldschoollevels.util.ExperienceUtils;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.ItemTags;
-import net.minecraft.world.Container;
-import net.minecraft.world.SimpleContainer;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.*;
@@ -21,17 +24,18 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.structure.Structure;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingEquipmentChangeEvent;
 import net.neoforged.neoforge.event.entity.living.LivingGetProjectileEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.ItemFishedEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.entity.player.ArrowLooseEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
+import net.minecraft.world.level.levelgen.structure.StructureStart;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -146,6 +150,17 @@ public class RestrictionHandler {
     public static void onEquipmentChange(LivingEquipmentChangeEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         SkillData data = player.getData(ModAttachments.SKILLS.get());
+
+        // Navigation Logic: Clear target if no Echo is held in either hand
+        // This is now above the isEmpty check so it works when swapping to an empty hand
+        boolean holdingEcho = player.getMainHandItem().getItem() instanceof EchoItem ||
+                player.getOffhandItem().getItem() instanceof EchoItem;
+
+        if (!holdingEcho && !player.getData(ModAttachments.ECHO_TARGET.get()).equals(BlockPos.ZERO)) {
+            player.setData(ModAttachments.ECHO_TARGET.get(), BlockPos.ZERO);
+            player.syncData(ModAttachments.ECHO_TARGET.get());
+        }
+
         ItemStack stack = event.getTo();
         if (stack.isEmpty()) return;
 
@@ -183,6 +198,11 @@ public class RestrictionHandler {
             }
             // Clear the slot so they aren't wearing/holding it
             player.getItemBySlot(slot).setCount(0);
+        }
+
+        // Instant Navigation Sync on Wield
+        if (stack.getItem() instanceof EchoItem echo) {
+            echo.updateAndSync(player, player.level());
         }
     }
 
@@ -290,6 +310,7 @@ public class RestrictionHandler {
         int smithLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.SMITHING));
         int cookLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.COOKING));
         int fletchLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.FLETCHING));
+        int arcanaLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.ARCANA));
 
         // Handle Furnace logic to prevent fuel waste and stop restricted smelting
         if (menu instanceof AbstractFurnaceMenu furnace) {
@@ -336,7 +357,6 @@ public class RestrictionHandler {
             }
         }
 
-        boolean changed = false;
         for (Slot slot : menu.slots) {
             ItemStack stack = slot.getItem();
             if (stack.isEmpty()) continue;
@@ -344,19 +364,73 @@ public class RestrictionHandler {
             int reqSmith = RequirementUtils.getRequiredSmithingLevel(stack);
             int reqCook = RequirementUtils.getRequiredCookingLevel(stack);
             int reqFletch = RequirementUtils.getRequiredFletchingLevel(stack);
-            
+            int reqArcana = RequirementUtils.getRequiredArcanaLevel(stack);
+
             String path = BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath();
             boolean isFletchingItem = path.contains("_knife") || path.contains("_bow") || path.contains("_arrow") || path.contains("_heads") || stack.is(Items.STICK);
             boolean isResult = slot instanceof ResultSlot || slot.container instanceof ResultContainer;
-            if (isResult && (smithLvl < reqSmith || cookLvl < reqCook || (isFletchingItem && fletchLvl < reqFletch))) {
-                slot.set(ItemStack.EMPTY);
-                changed = true;
+            if (isResult) {
+                List<String> missing = new ArrayList<>();
+                if (smithLvl < reqSmith) missing.add("Lvl " + reqSmith + " Smithing");
+                if (cookLvl < reqCook) missing.add("Lvl " + reqCook + " Cooking");
+                if (isFletchingItem && fletchLvl < reqFletch) missing.add("Lvl " + reqFletch + " Fletching");
+                if (arcanaLvl < reqArcana) missing.add("Lvl " + reqArcana + " Arcana");
+
+                boolean restricted = !missing.isEmpty();
+
+                // Element Proximity Check for Sigil Conversion
+                if (path.contains("_sigil") && !path.contains("blank") && !path.contains("raw")) {
+                    if (!isNearElementalDome(player, path)) {
+                        WarningOverlay.showWarning("You are not in the correct location to imbue this Sigil");
+                        restricted = true;
+                        } else if (restricted) {
+                        // If they ARE in the dome but lack the level, show the level requirement
+                        WarningOverlay.showWarning("Requires: " + String.join(", ", missing));
+                        }
+                    } else if (restricted) {
+                    WarningOverlay.showWarning("Requires: " + String.join(", ", missing));
+                }
+
+                if (restricted) {
+                    slot.set(ItemStack.EMPTY);
+                    menu.broadcastChanges();
+                }
             }
         }
+    }
 
-        if (changed) {
-            menu.broadcastChanges();
+    private static boolean isNearElementalDome(ServerPlayer player, String sigilPath) {
+        // Corrected parsing: Handle namespace properly to get just "air", "water", etc.
+        String element = sigilPath;
+        if (element.contains(":")) {
+            element = element.split(":")[1]; // Get "air_sigil"
         }
+        element = element.split("_")[0]; // Get "air"
+
+        // Target the structure tag we defined: #oldschoollevels:air_domes
+        TagKey<Structure> structureTag = TagKey.create(Registries.STRUCTURE,
+                Identifier.fromNamespaceAndPath("oldschoollevels", element + "_domes"));
+
+        BlockPos playerPos = player.blockPosition();
+        // Debugging: Log player's position
+
+        // Check at player's feet
+        StructureStart startAtFeet = player.level().structureManager()
+                .getStructureWithPieceAt(playerPos, structureTag);
+
+        if (startAtFeet.isValid()) {
+            return true;
+        }
+
+        // Check at player's eye level (or slightly above feet)
+        BlockPos playerEyePos = playerPos.above(); // Or player.getEyeBlockPosition()
+        StructureStart startAtEye = player.level().structureManager()
+                .getStructureWithPieceAt(playerEyePos, structureTag);
+
+        if (startAtEye.isValid()) {
+            return true;
+        }
+        return false;
     }
 
     private static void ejectItem(ServerPlayer player, Slot slot) {

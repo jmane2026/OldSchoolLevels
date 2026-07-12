@@ -1,0 +1,21 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "portal": "oldschoollevels:block/magic_portal_top",
+    "particle": "oldschoollevels:block/magic_portal_top"
+  },
+  "elements": [
+    {
+      "from": [2, 0, 7.9],
+      "to": [14, 16, 8.1],
+      "faces": {
+        "north": { "uv": [2, 0, 14, 16], "texture": "#portal" },
+        "south": { "uv": [2, 0, 14, 16], "texture": "#portal" },
+        "west":  { "uv": [7.9, 0, 8.1, 16], "texture": "#portal" },
+        "east":  { "uv": [7.9, 0, 8.1, 16], "texture": "#portal" },
+        "up":    { "uv": [2, 7.9, 14, 8.1], "texture": "#portal" },
+        "down":  { "uv": [2, 7.9, 14, 8.1], "texture": "#portal" }
+      }
+    }
+  ]
+}

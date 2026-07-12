@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    "oldschoollevels:blank_sigil",
+    "oldschoollevels:air_echo"
+  ],
+  "result": {
+    "id": "oldschoollevels:air_sigil"
+  }
+}

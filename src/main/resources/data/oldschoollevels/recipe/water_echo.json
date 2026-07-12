@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "A": "minecraft:amethyst_shard",
+    "B": "oldschoollevels:blank_sigil",
+    "W": "minecraft:water_bucket",
+    "P": "minecraft:ender_pearl"
+  },
+  "pattern": [
+    "BWB",
+    "APA",
+    "BWB"
+  ],
+  "result": {
+    "count": 1,
+    "id": "oldschoollevels:water_echo"
+  }
+}
