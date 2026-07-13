@@ -55,7 +55,7 @@ public class LevelingHandler {
     private static final Map<UUID, Long> WALL_JUMP_COOLDOWNS = new HashMap<>();
 
     @SubscribeEvent
-    public static void onPlayerLogin(PlayerLoggedInEvent event) {
+    public static void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             // Force sync magic data to client on join
             player.syncData(ModAttachments.ACTIVE_SPELL.get());

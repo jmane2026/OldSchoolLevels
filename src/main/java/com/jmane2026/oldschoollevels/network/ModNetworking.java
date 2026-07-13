@@ -1,14 +1,10 @@
 package com.jmane2026.oldschoollevels.network;
 
 import com.jmane2026.oldschoollevels.OldSchoolLevels;
-import com.jmane2026.oldschoollevels.client.gui.DamageIndicatorManager;
-import com.jmane2026.oldschoollevels.client.gui.UnlockToast;
-import com.jmane2026.oldschoollevels.client.gui.XpNotificationOverlay;
 import com.jmane2026.oldschoollevels.common.MagicHandler;
 import com.jmane2026.oldschoollevels.common.SkillAttributeHandler;
 import com.jmane2026.oldschoollevels.common.items.SigilPouchItem;
 import com.jmane2026.oldschoollevels.core.ModAttachments;
-import net.minecraft.client.Minecraft;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -30,23 +26,15 @@ public class ModNetworking {
         registrar.playToClient(
                 XpGainPayload.TYPE,
                 XpGainPayload.STREAM_CODEC,
-                (payload, context) -> {
-                    context.enqueueWork(() -> {
-                        XpNotificationOverlay.notify(payload.skill(), payload.amount(), payload.totalXp());
-                    });
-                }
+                (payload, context) -> context.enqueueWork(() -> 
+                        ClientPayloadHandler.handleXpGain(payload))
         );
 
         registrar.playToClient(
                 DamageNumberPayload.TYPE,
                 DamageNumberPayload.STREAM_CODEC,
-                (payload, context) -> {
-                    context.enqueueWork(() -> {
-                        DamageIndicatorManager.add(
-                                payload.amount(), payload.isCritical(), payload.isIncoming()
-                        );
-                    });
-                }
+                (payload, context) -> context.enqueueWork(() -> 
+                        ClientPayloadHandler.handleDamageSplat(payload))
         );
 
         registrar.playToServer(
@@ -100,11 +88,8 @@ public class ModNetworking {
         registrar.playToClient(
                 UnlockNotificationPayload.TYPE,
                 UnlockNotificationPayload.STREAM_CODEC,
-                (payload, context) -> {
-                    context.enqueueWork(() -> {
-                        UnlockToast.add(Minecraft.getInstance().getToastManager(), payload.skill(), payload.description(), payload.icon());
-                    });
-                }
+                (payload, context) -> context.enqueueWork(() -> 
+                        ClientPayloadHandler.handleUnlock(payload))
         );
 
         registrar.playToServer(
