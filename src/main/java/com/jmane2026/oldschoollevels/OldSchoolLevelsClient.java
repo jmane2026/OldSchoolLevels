@@ -13,6 +13,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.WindChargeRenderer;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.player.Player;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
@@ -71,6 +72,27 @@ public class OldSchoolLevelsClient {
                 graphics.fill(x, y, x + (int)(80 * ratio), y + 5, 0xFF55FF55);
             }
         });
+    }
+
+    @SubscribeEvent
+    static void onComputeFov(ComputeFovModifierEvent event) {
+        Player player = event.getPlayer();
+        if (player == null) return;
+
+        // Calculate the FOV shift caused by our Mobility speed bonus
+        int level = ExperienceUtils.getLevelAtExperience(player.getData(ModAttachments.SKILLS.get()).getExperience(Skill.MOBILITY));
+        float speedBonus = RequirementUtils.getMovementSpeedBonus(level);
+
+        // Minecraft's FOV formula for speed is: ( (currentSpeed / walkingSpeed) + 1.0 ) / 2.0
+        // We calculate the specific factor our Mobility skill contributes to that formula.
+        float targetFactor = 1.0f + (speedBonus / 2.0f);
+
+        // We must also account for the "FOV Effects" accessibility slider in the player's settings.
+        float fovScale = Minecraft.getInstance().options.fovEffectScale().get().floatValue();
+        float contribution = 1.0f + (targetFactor - 1.0f) * fovScale;
+
+        // Divide the current modifier by our contribution to return the FOV to the user's baseline.
+        event.setNewFovModifier(event.getFovModifier() / contribution);
     }
 
     @SubscribeEvent

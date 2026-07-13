@@ -134,8 +134,8 @@ public class CharacterStatsScreen extends Screen {
 
     private String getStrBonus(SkillData data, CombatStyle style) {
         int lvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.STRENGTH));
-        double bonus = (lvl - 1) * 0.1 * style.getStrengthScale();
-        return String.format("+%.1f", bonus);
+        double bonus = (lvl * style.getStrengthScale());
+        return String.format("+%.1f%%", bonus);
     }
 
     private String getAtkBonus(SkillData data, CombatStyle style) {

@@ -39,7 +39,7 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent;
 import net.minecraft.util.TriState;
-import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.*;
 
 import java.lang.reflect.Field;
 import java.util.List;
@@ -52,6 +52,7 @@ public class LevelingHandler {
 
     private static final Map<UUID, Integer> SPRINT_TIMERS = new HashMap<>();
     private static final Map<UUID, Integer> SPRINT_GRACE_TIMERS = new HashMap<>();
+    private static final Map<UUID, Long> WALL_JUMP_COOLDOWNS = new HashMap<>();
 
     @SubscribeEvent
     public static void onPlayerLogin(PlayerLoggedInEvent event) {
@@ -70,11 +71,39 @@ public class LevelingHandler {
     public static void onIncomingDamage(LivingIncomingDamageEvent event) {
         // Handle Critical Hits for Players
         if (event.getSource().getEntity() instanceof ServerPlayer player) {
+            float amount = event.getAmount();
+
+            // 1. Handle Critical Hits
             boolean isCrit = player.getRandom().nextFloat() < BASE_CRIT_CHANCE;
             if (isCrit) {
-                event.setAmount(event.getAmount() * 2);
+                amount *= 2;
             }
             player.setData(ModAttachments.IS_CRITICAL, isCrit);
+
+            // 2. Ranged Scaling Logic
+            if (event.getSource().getDirectEntity() instanceof AbstractArrow arrow) {
+                int rangedLvl = ExperienceUtils.getLevelAtExperience(player.getData(ModAttachments.SKILLS.get()).getExperience(Skill.RANGED));
+                ItemStack arrowStack = arrow.getPickupItemStackOrigin();
+                String arrowPath = !arrowStack.isEmpty() ? BuiltInRegistries.ITEM.getKey(arrowStack.getItem()).getPath() : "";
+                amount += Math.max(0, RequirementUtils.getArrowDamage(arrowPath) - 1.0f);
+                amount += RequirementUtils.getBowDamageBonus(BuiltInRegistries.ITEM.getKey(player.getMainHandItem().getItem()).getPath());
+                amount *= (1.0f + (rangedLvl / 100.0f));
+            }
+            // 3. Magic Scaling Logic
+            else if (event.getSource().getDirectEntity() instanceof AirBlastProjectile) {
+                int magicLvl = ExperienceUtils.getLevelAtExperience(player.getData(ModAttachments.SKILLS.get()).getExperience(Skill.MAGIC));
+                amount *= (1.0f + (magicLvl / 100.0f));
+            }
+            // 4. Melee Scaling Logic (Anything that isn't a projectile)
+            else {
+                SkillData data = player.getData(ModAttachments.SKILLS.get());
+                CombatStyle style = player.getData(ModAttachments.COMBAT_STYLE.get());
+                int strengthLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.STRENGTH));
+                
+                // Scaling: 1% bonus damage per level (multiplied by style scale)
+                amount *= (1.0f + ((strengthLvl / 100.0f) * style.getStrengthScale()));
+            }
+            event.setAmount(amount);
         }
     }
 
@@ -87,6 +116,7 @@ public class LevelingHandler {
         int level = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MOBILITY));
         float maxStamina = RequirementUtils.getMaxStamina(level);
         float oldStamina = currentStamina;
+        boolean isStaminaChanging = false;
         
         // Custom movement tracking using the LAST_POS attachment
         Vec3 currentPos = player.position();
@@ -101,6 +131,7 @@ public class LevelingHandler {
 
         if (isSprinting) {
             SPRINT_GRACE_TIMERS.put(player.getUUID(), 0); // Reset grace period while running
+            isStaminaChanging = true;
 
             // 1. Consuming Stamina
             // 0.25f gives ~20 seconds of run time at Level 1 (100 stamina)
@@ -126,8 +157,51 @@ public class LevelingHandler {
             if (grace > 10) {
                 if (currentStamina < maxStamina) {
                     currentStamina = Math.min(maxStamina, currentStamina + 0.6f);
+                    isStaminaChanging = true;
                 }
                 SPRINT_TIMERS.remove(player.getUUID());
+            }
+        }
+
+        // --- Wall Jump Logic ---
+        // Trigger if: in air, touching a wall, and pressing jump
+        // We also check if vertical movement has stabilized or started falling to ensure we're "in the air" properly
+        if (!player.onGround() && player.getLastClientInput().jump() && player.horizontalCollision && !player.getAbilities().flying && player.getDeltaMovement().y < 0.35) {
+            long currentTime = player.level().getGameTime();
+            if (currentTime > WALL_JUMP_COOLDOWNS.getOrDefault(player.getUUID(), 0L)) {
+                if (currentStamina >= 10.0f) {
+                    float speedBonus = RequirementUtils.getMovementSpeedBonus(level);
+                    Vec3 look = player.getLookAngle();
+                    
+                    // Raycast 1.5 blocks forward to see if we are facing the wall we want to jump off of
+                    Vec3 eyePos = player.getEyePosition();
+                    Vec3 rayEnd = eyePos.add(look.scale(1.5));
+                    BlockHitResult hit = player.level().clip(new net.minecraft.world.level.ClipContext(eyePos, rayEnd, net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.NONE, player));
+                    
+                    // If we are looking at a block, we want to jump AWAY from it.
+                    // If we are looking at air, we want to jump TOWARDS our look direction (forward).
+                    boolean facingWall = hit.getType() == HitResult.Type.BLOCK;
+                    double forceDirection = facingWall ? -1.0 : 1.0;
+
+                    // 1. Consume Stamina (10 points)
+                    currentStamina -= 10.0f;
+                    isStaminaChanging = true;
+
+                    // 2. Apply Velocity
+                    // Match our aggressive leaping jump multipliers for horizontal force
+                    double boostPower = player.isSprinting() ? (0.6 + (speedBonus * 0.75)) : (0.2 + (speedBonus * 0.3));
+                    
+                    // Scale vertical power with Mobility level to match the intensity of the ground jump
+                    double verticalPower = 0.5 + (RequirementUtils.getJumpBoost(level) * 0.7);
+                    player.setDeltaMovement(new Vec3(player.getDeltaMovement().x, verticalPower, player.getDeltaMovement().z));
+                    player.push(look.x * boostPower * forceDirection, 0, look.z * boostPower * forceDirection);
+                    player.hurtMarked = true;
+
+                    // 3. Effects and XP
+                    player.level().playSound(null, player.blockPosition(), SoundEvents.GOAT_LONG_JUMP, SoundSource.PLAYERS, 1.0f, 2.0f);
+                    awardXp(player, Skill.MOBILITY, 8 + (level / 10));
+                    WALL_JUMP_COOLDOWNS.put(player.getUUID(), currentTime + 12); // 0.6s cooldown
+                }
             }
         }
 
@@ -136,7 +210,7 @@ public class LevelingHandler {
             resetExhaustion(player.getFoodData());
         }
 
-        if (currentStamina != oldStamina) {
+        if (isStaminaChanging || currentStamina != oldStamina) {
             player.setData(ModAttachments.STAMINA.get(), currentStamina);
             player.syncData(ModAttachments.STAMINA.get());
         }
@@ -159,11 +233,18 @@ public class LevelingHandler {
             // 2. Award Mobility XP for jumping
             awardXp(player, Skill.MOBILITY, 2 + (level / 10));
 
-            // 3. Apply Mobility Jump Boost
-            float boost = RequirementUtils.getJumpBoost(level);
-            if (boost > 0) {
-                Vec3 delta = player.getDeltaMovement();
-                player.setDeltaMovement(delta.x, delta.y * (1.0f + boost), delta.z);
+            // 3. Preserve Horizontal Momentum
+            // We use the look angle to ensure the boost is applied in the direction the player wants to go.
+            float speedBonus = RequirementUtils.getMovementSpeedBonus(level);
+            Vec3 look = player.getLookAngle().multiply(1, 0, 1).normalize();
+            
+            // Only apply forward boost if the player is actually moving horizontally
+            if (player.getDeltaMovement().horizontalDistanceSqr() > 0.001) {
+                // Toned down power: Sprinting gets a notable push, walking gets a small nudge.
+                double boostPower = player.isSprinting() ? (0.5 + (speedBonus * 0.6)) : (0.15 + (speedBonus * 0.25));
+
+                player.push(look.x * boostPower, 0, look.z * boostPower);
+                player.hurtMarked = true; // CRITICAL: Tells the server to sync velocity to the client
             }
         }
     }
@@ -241,40 +322,8 @@ public class LevelingHandler {
     public static void onCombat(LivingDamageEvent.Post event) {
         // 1. Handle OUTGOING Damage (Player hits something)
         if (event.getSource().getEntity() instanceof ServerPlayer player) {
-            float baseDamage = event.getNewDamage();
-            float finalDamage = baseDamage;
-
-            // Ranged Scaling Logic
-            if (event.getSource().getDirectEntity() instanceof AbstractArrow arrow) {
-                SkillData data = player.getData(ModAttachments.SKILLS.get());
-                int rangedLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.RANGED));
-
-                // 1. Get Arrow Tier Damage using getPickupItemStackOrigin() from AbstractArrow.java source
-                ItemStack arrowStack = arrow.getPickupItemStackOrigin();
-                String arrowPath = !arrowStack.isEmpty() ? BuiltInRegistries.ITEM.getKey(arrowStack.getItem()).getPath() : "";
-                
-                float arrowBonus = Math.max(0, RequirementUtils.getArrowDamage(arrowPath) - 1.0f);
-                finalDamage += arrowBonus;
-
-                // 2. Get Bow Tier Damage (factors in material of the held bow)
-                ItemStack bow = player.getMainHandItem();
-                String bowPath = BuiltInRegistries.ITEM.getKey(bow.getItem()).getPath();
-                finalDamage += RequirementUtils.getBowDamageBonus(bowPath);
-
-                // 3. Final scaling: 1% bonus damage per Ranged level
-                finalDamage *= (1.0f + (rangedLvl / 100.0f));
-            }
-            
-            // Magic Scaling Logic
-            else if (event.getSource().getDirectEntity() instanceof AirBlastProjectile) {
-                SkillData data = player.getData(ModAttachments.SKILLS.get());
-                int magicLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MAGIC));
-                // Scaling: 1% bonus damage per level (Level 6 = +6%) to match Character Sheet
-                finalDamage *= (1.0f + (magicLvl / 100.0f));
-            }
-
-            float damage = finalDamage;
-
+            // Use the finalized damage value from the event (which includes our scaling and armor reductions)
+            float damage = event.getNewDamage();
             if (damage <= 0) return;
 
             boolean wasCrit = player.getData(ModAttachments.IS_CRITICAL);
@@ -483,6 +532,16 @@ public class LevelingHandler {
         }
 
         PacketDistributor.sendToPlayer(player, new XpGainPayload(skill, amount, newData.getExperience(skill)));
+    }
+
+    public static void setXp(ServerPlayer player, Skill skill, long amount) {
+        SkillData currentData = player.getData(ModAttachments.SKILLS);
+        // Assuming SkillData has a way to create a new instance with a specific XP value
+        SkillData newData = currentData.setExperience(skill, amount);
+
+        player.setData(ModAttachments.SKILLS, newData);
+        player.syncData(ModAttachments.SKILLS.get());
+        SkillAttributeHandler.refreshAttributes(player);
     }
 
     private static long getMiningXp(Block block) {

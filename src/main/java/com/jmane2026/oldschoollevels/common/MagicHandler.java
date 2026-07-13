@@ -253,15 +253,20 @@ public class MagicHandler {
     public static void handleTeleportRequest(ServerPlayer player, TeleportLocation loc, boolean isPortal) {
         Spell spell = isPortal ? Spell.PORTAL : Spell.TELEPORT;
 
+        ItemStack pouch = findPouch(player);
+
         // Check requirements again on server
         for (Spell.SpellCost cost : spell.getCosts()) {
-            if (player.getInventory().countItem(cost.item().get()) < cost.amount()) return;
+            int inPouch = pouch.isEmpty() ? 0 : SigilPouchItem.getSigilCount(pouch, cost.item().get());
+            int inInv = player.getInventory().countItem(cost.item().get());
+            if (inPouch + inInv < cost.amount()) {
+                return;
+            }
         }
 
         if (isPortal) {
             BlockPos pos = player.blockPosition().relative(player.getDirection());
             BlockPos topPos = pos.above();
-
             // Ensure space is clear before spawning
             if (!player.level().getBlockState(pos).canBeReplaced() || !player.level().getBlockState(topPos).canBeReplaced()) {
                 WarningOverlay.showWarning("Not enough space to create a Portal");
@@ -277,13 +282,27 @@ public class MagicHandler {
             }
             player.level().playSound(null, pos, SoundEvents.END_PORTAL_SPAWN, SoundSource.PLAYERS, 1.0f, 1.0f);
         } else {
-            player.teleportTo(player.level().getServer().getLevel(loc.dimension()), loc.pos().getX() + 0.5, loc.pos().getY(), loc.pos().getZ() + 0.5, Set.of(), player.getYRot(), player.getXRot(), true);
-            player.level().playSound(null, player.blockPosition(), SoundEvents.CHORUS_FRUIT_TELEPORT, SoundSource.PLAYERS, 1.0f, 1.0f);
+            ServerLevel destLevel = player.level().getServer().getLevel(loc.dimension());
+            if (destLevel != null) {
+                // Added +0.1 to Y to ensure the player isn't stuck in the floor
+                player.teleportTo(destLevel, loc.pos().getX() + 0.5, loc.pos().getY() + 0.1, loc.pos().getZ() + 0.5, Set.of(), player.getYRot(), player.getXRot(), true);
+                player.level().playSound(null, player.blockPosition(), SoundEvents.CHORUS_FRUIT_TELEPORT, SoundSource.PLAYERS, 1.0f, 1.0f);
+            }
         }
 
-        // Consume costs
+        // 3. Consume Costs (Pouch Priority)
         for (Spell.SpellCost cost : spell.getCosts()) {
-            player.getInventory().clearOrCountMatchingItems(p -> p.getItem() == cost.item().get(), cost.amount(), player.inventoryMenu.getCraftSlots());
+            int needed = cost.amount();
+            if (!pouch.isEmpty()) {
+                int fromPouch = Math.min(needed, SigilPouchItem.getSigilCount(pouch, cost.item().get()));
+                if (fromPouch > 0) {
+                    SigilPouchItem.consumeSigils(pouch, cost.item().get(), fromPouch);
+                    needed -= fromPouch;
+                }
+            }
+            if (needed > 0) {
+                player.getInventory().clearOrCountMatchingItems(p -> p.getItem() == cost.item().get(), needed, player.inventoryMenu.getCraftSlots());
+            }
         }
         LevelingHandler.awardXp(player, Skill.MAGIC, spell.getBaseXp());
     }
