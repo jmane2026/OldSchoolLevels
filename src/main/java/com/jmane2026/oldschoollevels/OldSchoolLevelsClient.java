@@ -5,13 +5,12 @@ import com.jmane2026.oldschoollevels.common.MagicHandler;
 import com.jmane2026.oldschoollevels.common.RequirementUtils;
 import com.jmane2026.oldschoollevels.common.Skill;
 import com.jmane2026.oldschoollevels.core.ModAttachments;
-import com.jmane2026.oldschoollevels.core.ModBlocks;
 import com.jmane2026.oldschoollevels.core.ModEntities;
 import com.jmane2026.oldschoollevels.core.ModMenus;
 import com.jmane2026.oldschoollevels.util.ExperienceUtils;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.WindChargeRenderer;
-import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.api.distmarker.Dist;
@@ -49,6 +48,10 @@ public class OldSchoolLevelsClient {
         event.registerAboveAll(Identifier.fromNamespaceAndPath(OldSchoolLevels.MODID, "echo_nav"), EchoNavigationOverlay::render);
 
         event.registerAboveAll(Identifier.fromNamespaceAndPath(OldSchoolLevels.MODID, "active_spell"), MagicHandler::renderActiveSpell);
+
+        event.registerAboveAll(Identifier.fromNamespaceAndPath(OldSchoolLevels.MODID, "target_health"), (graphics, partialTick) -> {
+            TargetHealthOverlay.render(graphics, partialTick.getGameTimeDeltaPartialTick(true));
+        });
 
         event.registerAboveAll(Identifier.fromNamespaceAndPath(OldSchoolLevels.MODID, "stamina_bar"), (graphics, delta) -> {
             Minecraft mc = Minecraft.getInstance();
@@ -114,6 +117,22 @@ class ClientGameEvents {
         XpNotificationOverlay.clientTick();
         WarningOverlay.clientTick();
         DamageIndicatorManager.clientTick();
+
+        // --- Momentum Preservation (Drag Reduction) ---
+        net.minecraft.client.player.LocalPlayer player = Minecraft.getInstance().player;
+        // Allow momentum retention in the air OR while skimming the surface of water (eyes dry)
+        if (player != null && !player.onGround() && !player.getAbilities().flying && (!player.isInWater() || !player.isEyeInFluid(net.minecraft.tags.FluidTags.WATER))) {
+            // Check if we are actually moving horizontally
+            if (player.getDeltaMovement().horizontalDistanceSqr() > 0.001) {
+                int level = ExperienceUtils.getLevelAtExperience(player.getData(ModAttachments.SKILLS.get()).getExperience(Skill.MOBILITY));
+                float retention = RequirementUtils.getMomentumRetention(level);
+                
+                if (retention > 1.0f) {
+                    Vec3 d = player.getDeltaMovement();
+                    player.setDeltaMovement(d.x * retention, d.y, d.z * retention);
+                }
+            }
+        }
     }
 
     @SubscribeEvent

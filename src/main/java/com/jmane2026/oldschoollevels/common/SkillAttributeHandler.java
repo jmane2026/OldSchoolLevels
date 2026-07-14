@@ -73,6 +73,15 @@ public class SkillAttributeHandler {
             double bonus = RequirementUtils.getJumpBoost(level);
             jump.addTransientModifier(new AttributeModifier(Identifier.fromNamespaceAndPath(OldSchoolLevels.MODID, "mobility_jump"), bonus, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
         }
+
+        AttributeInstance attackSpeed = player.getAttribute(Attributes.ATTACK_SPEED);
+        if (attackSpeed != null) {
+            attackSpeed.removeModifier(Identifier.fromNamespaceAndPath(OldSchoolLevels.MODID, "attack_speed_bonus"));
+            int level = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.ATTACK));
+            // Match the CharacterStatsScreen logic: (lvl - 1) * 0.05 * style scale
+            double bonus = (level - 1) * 0.05 * style.getAttackSpeedScale();
+            attackSpeed.addTransientModifier(new AttributeModifier(Identifier.fromNamespaceAndPath(OldSchoolLevels.MODID, "attack_speed_bonus"), bonus, AttributeModifier.Operation.ADD_VALUE));
+        }
     }
 
     private static void applyModifier(ServerPlayer player, net.minecraft.core.Holder<net.minecraft.world.entity.ai.attributes.Attribute> attribute, Identifier id, double amount) {

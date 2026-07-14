@@ -26,6 +26,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.minecraft.tags.FluidTags;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingEvent;
@@ -33,8 +34,7 @@ import net.neoforged.neoforge.event.entity.living.LivingFallEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
 import net.neoforged.neoforge.event.entity.player.ItemFishedEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.event.level.BlockEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
+import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent;
@@ -42,10 +42,7 @@ import net.minecraft.util.TriState;
 import net.minecraft.world.phys.*;
 
 import java.lang.reflect.Field;
-import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.UUID;
+import java.util.*;
 
 @EventBusSubscriber(modid = OldSchoolLevels.MODID)
 public class LevelingHandler {
@@ -53,6 +50,8 @@ public class LevelingHandler {
     private static final Map<UUID, Integer> SPRINT_TIMERS = new HashMap<>();
     private static final Map<UUID, Integer> SPRINT_GRACE_TIMERS = new HashMap<>();
     private static final Map<UUID, Long> WALL_JUMP_COOLDOWNS = new HashMap<>();
+    private static final Map<UUID, Long> WATER_JUMP_COOLDOWNS = new HashMap<>();
+    private static final Set<UUID> WATER_SKIP_ELIGIBILITY = new HashSet<>();
 
     @SubscribeEvent
     public static void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
@@ -163,15 +162,32 @@ public class LevelingHandler {
             }
         }
 
+        // --- Water Skip Eligibility Management ---
+        // If on solid ground, you are eligible to start a skip chain
+        if (player.onGround()) {
+            WATER_SKIP_ELIGIBILITY.add(player.getUUID());
+        }
+        // If your eyes go under water, you've "sunk" and lose eligibility until you touch land again
+        if (player.isEyeInFluid(FluidTags.WATER)) {
+            WATER_SKIP_ELIGIBILITY.remove(player.getUUID());
+        }
+
         // --- Wall Jump Logic ---
         // Trigger if: in air, touching a wall, and pressing jump
         // We also check if vertical movement has stabilized or started falling to ensure we're "in the air" properly
-        if (!player.onGround() && player.getLastClientInput().jump() && player.horizontalCollision && !player.getAbilities().flying && player.getDeltaMovement().y < 0.35) {
+        if (level >= 60 && !player.onGround() && player.getLastClientInput().jump() && player.horizontalCollision && !player.getAbilities().flying && player.getDeltaMovement().y < 0.35) {
             long currentTime = player.level().getGameTime();
             if (currentTime > WALL_JUMP_COOLDOWNS.getOrDefault(player.getUUID(), 0L)) {
                 if (currentStamina >= 10.0f) {
                     float speedBonus = RequirementUtils.getMovementSpeedBonus(level);
                     Vec3 look = player.getLookAngle();
+                    
+                    // Normalize the look vector on the horizontal plane (X and Z only).
+                    // This ensures the horizontal push is constant even if looking straight up or down.
+                    Vec3 horizontalLook = new Vec3(look.x, 0, look.z).normalize();
+                    
+                    // Fallback if looking perfectly vertical (should be nearly impossible with player movement)
+                    if (Double.isNaN(horizontalLook.x)) horizontalLook = player.getDirection().getUnitVec3();
                     
                     // Raycast 1.5 blocks forward to see if we are facing the wall we want to jump off of
                     Vec3 eyePos = player.getEyePosition();
@@ -194,13 +210,52 @@ public class LevelingHandler {
                     // Scale vertical power with Mobility level to match the intensity of the ground jump
                     double verticalPower = 0.5 + (RequirementUtils.getJumpBoost(level) * 0.7);
                     player.setDeltaMovement(new Vec3(player.getDeltaMovement().x, verticalPower, player.getDeltaMovement().z));
-                    player.push(look.x * boostPower * forceDirection, 0, look.z * boostPower * forceDirection);
+                    player.push(horizontalLook.x * boostPower * forceDirection, 0, horizontalLook.z * boostPower * forceDirection);
                     player.hurtMarked = true;
 
                     // 3. Effects and XP
                     player.level().playSound(null, player.blockPosition(), SoundEvents.GOAT_LONG_JUMP, SoundSource.PLAYERS, 1.0f, 2.0f);
                     awardXp(player, Skill.MOBILITY, 8 + (level / 10));
                     WALL_JUMP_COOLDOWNS.put(player.getUUID(), currentTime + 12); // 0.6s cooldown
+                }
+            }
+        }
+
+        // --- Water Jump (Surface Skipping) Logic ---
+        // We check if the player is currently in water OR if the block directly below them is water.
+        // This creates a much larger window for high-speed "skipping".
+        boolean isNearWaterSurface = player.level().getFluidState(player.blockPosition()).is(FluidTags.WATER) || 
+                                    player.level().getFluidState(player.blockPosition().below()).is(FluidTags.WATER);
+
+        if (WATER_SKIP_ELIGIBILITY.contains(player.getUUID()) && isNearWaterSurface && !player.isEyeInFluid(FluidTags.WATER) && player.getLastClientInput().jump() && !player.getAbilities().flying) {
+            long currentTime = player.level().getGameTime();
+            if (currentTime > WATER_JUMP_COOLDOWNS.getOrDefault(player.getUUID(), 0L)) {
+                // Water jumping is strenuous; it costs 12.0 stamina
+                if (currentStamina >= 12.0f) {
+                    currentStamina -= 12.0f;
+                    isStaminaChanging = true;
+
+                    float speedBonus = RequirementUtils.getMovementSpeedBonus(level);
+                    Vec3 look = player.getLookAngle();
+                    Vec3 horizontalLook = new Vec3(look.x, 0, look.z).normalize();
+                    if (Double.isNaN(horizontalLook.x)) horizontalLook = player.getDirection().getUnitVec3();
+
+                    // 1. Apply Vertical Power (Scaled with Mobility)
+                    // We use a slightly lower vertical multiplier than wall jumps to simulate the "softness" of water
+                    double verticalPower = 0.45 + (RequirementUtils.getJumpBoost(level) * 0.5);
+                    player.setDeltaMovement(new Vec3(player.getDeltaMovement().x, verticalPower, player.getDeltaMovement().z));
+
+                    // 2. Apply Horizontal Momentum
+                    // We increase the boostPower slightly to overcome the high drag of water blocks
+                    double boostPower = player.isSprinting() ? (0.6 + (speedBonus * 0.7)) : (0.2 + (speedBonus * 0.3));
+                    player.push(horizontalLook.x * boostPower, 0, horizontalLook.z * boostPower);
+                    
+                    player.hurtMarked = true; // Force velocity sync to client
+
+                    // 3. Effects and XP
+                    player.level().playSound(null, player.blockPosition(), SoundEvents.PLAYER_SPLASH, SoundSource.PLAYERS, 1.0f, 1.5f);
+                    awardXp(player, Skill.MOBILITY, 5 + (level / 10));
+                    WATER_JUMP_COOLDOWNS.put(player.getUUID(), currentTime + 15); // 0.75s cooldown to require timing
                 }
             }
         }
@@ -222,6 +277,8 @@ public class LevelingHandler {
             SkillData data = player.getData(ModAttachments.SKILLS.get());
             int level = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MOBILITY));
 
+            if (level < 20) return; // Feature locked until level 20
+
             // 1. Consume Stamina for jumping (costs 4.0 points)
             float currentStamina = player.getData(ModAttachments.STAMINA.get());
             player.setData(ModAttachments.STAMINA.get(), Math.max(0, currentStamina - 4.0f));
@@ -232,20 +289,6 @@ public class LevelingHandler {
 
             // 2. Award Mobility XP for jumping
             awardXp(player, Skill.MOBILITY, 2 + (level / 10));
-
-            // 3. Preserve Horizontal Momentum
-            // We use the look angle to ensure the boost is applied in the direction the player wants to go.
-            float speedBonus = RequirementUtils.getMovementSpeedBonus(level);
-            Vec3 look = player.getLookAngle().multiply(1, 0, 1).normalize();
-            
-            // Only apply forward boost if the player is actually moving horizontally
-            if (player.getDeltaMovement().horizontalDistanceSqr() > 0.001) {
-                // Toned down power: Sprinting gets a notable push, walking gets a small nudge.
-                double boostPower = player.isSprinting() ? (0.5 + (speedBonus * 0.6)) : (0.15 + (speedBonus * 0.25));
-
-                player.push(look.x * boostPower, 0, look.z * boostPower);
-                player.hurtMarked = true; // CRITICAL: Tells the server to sync velocity to the client
-            }
         }
     }
 
@@ -262,7 +305,7 @@ public class LevelingHandler {
     }
 
     @SubscribeEvent
-    public static void onBlockBreak(BlockEvent.BreakEvent event) {
+    public static void onBlockBreak(BreakBlockEvent event) {
         if (!(event.getPlayer() instanceof ServerPlayer player)) return;
 
         BlockState state = event.getState();
@@ -323,7 +366,7 @@ public class LevelingHandler {
         // 1. Handle OUTGOING Damage (Player hits something)
         if (event.getSource().getEntity() instanceof ServerPlayer player) {
             // Use the finalized damage value from the event (which includes our scaling and armor reductions)
-            float damage = event.getNewDamage();
+            float damage = event.getHealthDamage();
             if (damage <= 0) return;
 
             boolean wasCrit = player.getData(ModAttachments.IS_CRITICAL);
@@ -363,7 +406,7 @@ public class LevelingHandler {
 
         // 2. Handle INCOMING Damage (Something hits Player)
         if (event.getEntity() instanceof ServerPlayer victim) {
-            float incomingDmg = event.getNewDamage();
+            float incomingDmg = event.getHealthDamage();
             if (incomingDmg > 0) {
                 PacketDistributor.sendToPlayer(victim, new DamageNumberPayload(
                         victim.getX(), victim.getY(), victim.getZ(), incomingDmg, false, true
@@ -576,38 +619,36 @@ public class LevelingHandler {
 
     private static float getMiningSpeedMultiplier(Block block) {
         // Tier 0: Basic stones (2% per level)
-        if (block == Blocks.STONE || block == Blocks.COBBLESTONE || block == Blocks.DEEPSLATE || block == Blocks.COBBLED_DEEPSLATE) return 0.02f;
+        if (block == Blocks.STONE || block == Blocks.COBBLESTONE || block == Blocks.DEEPSLATE || block == Blocks.COBBLED_DEEPSLATE) return 0.12f;
         
         // Tier 1: Common Ores (Coal, Iron) (1.5% per level)
         if (block == Blocks.COAL_ORE || block == Blocks.DEEPSLATE_COAL_ORE ||
             block == Blocks.IRON_ORE || block == Blocks.DEEPSLATE_IRON_ORE || 
-            block == Blocks.COPPER_ORE || block == Blocks.DEEPSLATE_COPPER_ORE) return 0.015f;
+            block == Blocks.COPPER_ORE || block == Blocks.DEEPSLATE_COPPER_ORE) return 0.10f;
 
         // Tier 2: Rare Ores (1% per level)
         if (block == Blocks.GOLD_ORE || block == Blocks.DEEPSLATE_GOLD_ORE || 
             block == Blocks.LAPIS_ORE || block == Blocks.DEEPSLATE_LAPIS_ORE || 
-            block == Blocks.REDSTONE_ORE || block == Blocks.DEEPSLATE_REDSTONE_ORE) return 0.01f;
+            block == Blocks.REDSTONE_ORE || block == Blocks.DEEPSLATE_REDSTONE_ORE) return 0.08f;
 
         // Tier 3: Elite Ores (0.5% per level)
         if (block == Blocks.DIAMOND_ORE || block == Blocks.DEEPSLATE_DIAMOND_ORE || 
             block == Blocks.EMERALD_ORE || block == Blocks.DEEPSLATE_EMERALD_ORE ||
-            block == Blocks.NETHER_QUARTZ_ORE || block == Blocks.NETHER_GOLD_ORE) return 0.005f;
+            block == Blocks.NETHER_QUARTZ_ORE || block == Blocks.NETHER_GOLD_ORE) return 0.05f;
 
         // Tier 4: Legendary (0.2% per level)
-        if (block == Blocks.ANCIENT_DEBRIS) return 0.002f;
+        if (block == Blocks.ANCIENT_DEBRIS) return 0.05f;
 
         // Default for unrecognized ores or copper
         return 0.015f; 
     }
 
     private static float getWoodcuttingSpeedMultiplier(Block block) {
-        String path = BuiltInRegistries.BLOCK.getKey(block).getPath();
-        
-        if (block == Blocks.OAK_LOG || block == Blocks.SPRUCE_LOG || block == Blocks.BIRCH_LOG) return 0.02f; // 2%
-        if (block == Blocks.JUNGLE_LOG || block == Blocks.ACACIA_LOG) return 0.015f; // 1.5%
-        if (block == Blocks.DARK_OAK_LOG || block == Blocks.MANGROVE_LOG || block == Blocks.CHERRY_LOG) return 0.01f; // 1%
-        
-        return 0.01f;
+        if (block == Blocks.OAK_LOG || block == Blocks.SPRUCE_LOG || block == Blocks.BIRCH_LOG) return 0.08f; // 8%
+        if (block == Blocks.JUNGLE_LOG || block == Blocks.ACACIA_LOG) return 0.06f; // 6%
+        if (block == Blocks.DARK_OAK_LOG || block == Blocks.MANGROVE_LOG || block == Blocks.CHERRY_LOG) return 0.04f; // 4%
+
+        return 0.04f;
     }
 
     private static long getFishXp(ItemStack stack) {

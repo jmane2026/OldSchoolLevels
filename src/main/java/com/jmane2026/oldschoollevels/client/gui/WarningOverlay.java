@@ -31,7 +31,7 @@ public class WarningOverlay {
         float yPos = 40.0f;
         if (mc.screen instanceof AbstractContainerScreen<?> container) {
             // Just above the inventory frame (guiTop is the top of the actual box)
-            yPos = (float) container.getGuiTop() - 15.0f;
+            yPos = (float) container.getTopPos() - 15.0f;
         }
 
         // Calculate Alpha for fading

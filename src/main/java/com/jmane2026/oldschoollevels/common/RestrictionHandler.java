@@ -33,6 +33,7 @@ import net.neoforged.neoforge.event.entity.player.ItemFishedEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.entity.player.ArrowLooseEvent;
+import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
 import net.minecraft.world.level.levelgen.structure.StructureStart;
@@ -89,7 +90,7 @@ public class RestrictionHandler {
     }
 
     @SubscribeEvent
-    public static void onBlockBreak(BlockEvent.BreakEvent event) {
+    public static void onBlockBreak(BreakBlockEvent event) {
         if (!(event.getPlayer() instanceof ServerPlayer player)) return;
         SkillData data = player.getData(ModAttachments.SKILLS.get());
         ItemStack held = player.getMainHandItem();

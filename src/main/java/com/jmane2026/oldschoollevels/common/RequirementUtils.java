@@ -158,15 +158,23 @@ public class RequirementUtils {
     }
 
     public static float getJumpBoost(int level) {
+        if (level < 20) return 0.0f;
         return (level - 1) * 0.015f; // ~1.5% higher per level
     }
 
     public static float getFallReduction(int level) {
+        if (level < 40) return 0.0f;
         return (level - 1) * 0.01f; // 1% reduction per level
     }
 
     public static float getMaxStamina(int level) {
         return 100.0f + ((level - 1) * 2.0f); // +2 Max Stamina per level
+    }
+
+    public static float getMomentumRetention(int level) {
+        // Vanilla air friction is roughly 0.91. 
+        // At Level 99, we provide a factor to counteract this decay.
+        return 1.0f + (level / 99.0f * 0.08f); 
     }
 
     public static float getArrowDamage(String path) {
@@ -253,7 +261,7 @@ public class RequirementUtils {
             case FLETCHING, RANGED -> populateArcheryUnlocks(unlocks);
             case ARCANA -> populateArcanaUnlocks(unlocks);
             case MAGIC -> populateMagicUnlocks(unlocks);
-            case MOBILITY -> {}
+            case MOBILITY -> populateMobilityUnlocks(unlocks);
         }
         return unlocks;
     }
@@ -370,5 +378,13 @@ public class RequirementUtils {
         unlocks.add(new UnlockInfo(25, "Salmon & Chicken", new ItemStack(Items.COOKED_SALMON)));
         unlocks.add(new UnlockInfo(40, "Pie & Stews", new ItemStack(Items.PUMPKIN_PIE)));
         unlocks.add(new UnlockInfo(55, "Cake & Rabbit Stew", new ItemStack(Items.CAKE)));
+    }
+
+    private static void populateMobilityUnlocks(List<UnlockInfo> unlocks) {
+        unlocks.add(new UnlockInfo(1, "Speed Scaling", new ItemStack(Items.LEATHER_BOOTS)));
+        unlocks.add(new UnlockInfo(20, "Jump Scaling", new ItemStack(Items.RABBIT_FOOT)));
+        unlocks.add(new UnlockInfo(40, "Fall Reduction", new ItemStack(Items.FEATHER)));
+        unlocks.add(new UnlockInfo(60, "Wall Jumping", new ItemStack(Items.GOAT_HORN)));
+        unlocks.add(new UnlockInfo(80, "Water Striding", new ItemStack(Items.LILY_PAD)));
     }
 }

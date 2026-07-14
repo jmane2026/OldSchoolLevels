@@ -42,7 +42,7 @@ public class ModNetworking {
                 ChangeStylePayload.STREAM_CODEC,
                 (payload, context) -> {
                     context.enqueueWork(() -> {
-                        context.player().setData(ModAttachments.COMBAT_STYLE, payload.style());
+                        context.player().setData(ModAttachments.COMBAT_STYLE.get(), payload.style());
                         SkillAttributeHandler.refreshAttributes((ServerPlayer) context.player());
                     });
                 }
