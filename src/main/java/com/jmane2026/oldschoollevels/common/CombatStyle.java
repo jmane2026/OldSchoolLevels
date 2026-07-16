@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
+import org.jspecify.annotations.NonNull;
 
 public enum CombatStyle {
     ACCURATE("Accurate (Attack)", 0.5f, 0.5f, 1.0f),
@@ -28,13 +29,11 @@ public enum CombatStyle {
     public float getDefenseScale() { return defenseScale; }
     public float getAttackSpeedScale() { return attackSpeedScale; }
 
-    public CombatStyle next() { return values()[(this.ordinal() + 1) % values().length]; }
-
     public static final Codec<CombatStyle> CODEC = Codec.INT.xmap(i -> values()[i], CombatStyle::ordinal);
 
     public static final StreamCodec<RegistryFriendlyByteBuf, CombatStyle> STREAM_CODEC = new StreamCodec<>() {
         @Override
-        public CombatStyle decode(RegistryFriendlyByteBuf buf) {
+        public @NonNull CombatStyle decode(RegistryFriendlyByteBuf buf) {
             return values()[buf.readVarInt()];
         }
 

@@ -22,7 +22,7 @@ import net.neoforged.neoforge.client.event.*;
 
 @EventBusSubscriber(modid = OldSchoolLevels.MODID, value = Dist.CLIENT)
 public class OldSchoolLevelsClient {
-    public OldSchoolLevelsClient(ModContainer container) {
+    public OldSchoolLevelsClient(ModContainer ignoredContainer) {
     }
 
     @SubscribeEvent
@@ -37,40 +37,40 @@ public class OldSchoolLevelsClient {
             XpNotificationOverlay.render(graphics, partialTick.getGameTimeDeltaPartialTick(true));
         });
 
-        event.registerAboveAll(Identifier.fromNamespaceAndPath(OldSchoolLevels.MODID, "damage_indicators"), (graphics, partialTick) -> {
-            DamageIndicatorManager.render(graphics, partialTick.getGameTimeDeltaPartialTick(true));
-        });
+        event.registerAboveAll(Identifier.fromNamespaceAndPath(OldSchoolLevels.MODID, "damage_indicators"), (graphics, partialTick) -> DamageIndicatorManager.render(graphics, partialTick.getGameTimeDeltaPartialTick(true)));
 
-        event.registerAboveAll(Identifier.fromNamespaceAndPath(OldSchoolLevels.MODID, "warning_hud"), (graphics, partialTick) -> {
-            WarningOverlay.render(graphics, partialTick.getGameTimeDeltaPartialTick(true));
-        });
+        event.registerAboveAll(Identifier.fromNamespaceAndPath(OldSchoolLevels.MODID, "warning_hud"), (graphics, partialTick) -> WarningOverlay.render(graphics, partialTick.getGameTimeDeltaPartialTick(true)));
 
         event.registerAboveAll(Identifier.fromNamespaceAndPath(OldSchoolLevels.MODID, "echo_nav"), EchoNavigationOverlay::render);
 
         event.registerAboveAll(Identifier.fromNamespaceAndPath(OldSchoolLevels.MODID, "active_spell"), MagicHandler::renderActiveSpell);
 
-        event.registerAboveAll(Identifier.fromNamespaceAndPath(OldSchoolLevels.MODID, "target_health"), (graphics, partialTick) -> {
-            TargetHealthOverlay.render(graphics, partialTick.getGameTimeDeltaPartialTick(true));
-        });
+        event.registerAboveAll(Identifier.fromNamespaceAndPath(OldSchoolLevels.MODID, "target_health"), (graphics, partialTick) -> TargetHealthOverlay.render(graphics, partialTick.getGameTimeDeltaPartialTick(true)));
 
-        event.registerAboveAll(Identifier.fromNamespaceAndPath(OldSchoolLevels.MODID, "stamina_bar"), (graphics, delta) -> {
+        event.registerAboveAll(Identifier.fromNamespaceAndPath(OldSchoolLevels.MODID, "stamina_bar"), (graphics, _) -> {
             Minecraft mc = Minecraft.getInstance();
             // Hide if F1 is pressed, player is null, or in Creative/Spectator (hasExperience() is false in those modes)
             if (mc.options.hideGui || mc.player == null || mc.gameMode == null || !mc.gameMode.hasExperience()) return;
 
+            // Base Position: Aligned above the food bar (right side of center)
             int x = mc.getWindow().getGuiScaledWidth() / 2 + 10;
-            int y = mc.getWindow().getGuiScaledHeight() - 49; // Above food bar
+            int y = mc.getWindow().getGuiScaledHeight() - 49;
+
+            // Dynamic Offset: Move up if air bubbles are visible
+            if (mc.player.getAirSupply() < mc.player.getMaxAirSupply()) {
+                y -= 10;
+            }
 
             float stamina = mc.player.getData(ModAttachments.STAMINA.get());
             int level = ExperienceUtils.getLevelAtExperience(mc.player.getData(ModAttachments.SKILLS.get()).getExperience(Skill.MOBILITY));
             float maxStamina = RequirementUtils.getMaxStamina(level);
             float ratio = stamina / maxStamina;
 
-            // Background (80px wide to align with vanilla bars)
-            // Changed border to grayish color to match hotbar slots
+            // Background (80px wide to match vanilla bar width)
             graphics.outline(x - 1, y - 1, 82, 7, 0xFF373737);
             graphics.fill(x, y, x + 80, y + 5, 0xAA000000);
-            // Green Bar (drains from right to left)
+
+            // Green Bar (Current Stamina)
             if (ratio > 0) {
                 graphics.fill(x, y, x + (int)(80 * ratio), y + 5, 0xFF55FF55);
             }
@@ -80,7 +80,6 @@ public class OldSchoolLevelsClient {
     @SubscribeEvent
     static void onComputeFov(ComputeFovModifierEvent event) {
         Player player = event.getPlayer();
-        if (player == null) return;
 
         // Calculate the FOV shift caused by our Mobility speed bonus
         int level = ExperienceUtils.getLevelAtExperience(player.getData(ModAttachments.SKILLS.get()).getExperience(Skill.MOBILITY));

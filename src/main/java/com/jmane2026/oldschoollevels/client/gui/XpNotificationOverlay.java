@@ -58,11 +58,10 @@ public class XpNotificationOverlay {
         }
     }
 
-    public static void render(GuiGraphicsExtractor graphics, float partialTick) {
+    public static void render(GuiGraphicsExtractor graphics, float ignoredPartialTick) {
         if (ACTIVE_NOTIFICATIONS.isEmpty()) return;
 
         Minecraft mc = Minecraft.getInstance();
-        int screenWidth = mc.getWindow().getGuiScaledWidth();
         int screenHeight = mc.getWindow().getGuiScaledHeight();
         
         // POSITIONING: Bottom Left, stacking upwards
@@ -94,7 +93,7 @@ public class XpNotificationOverlay {
             int bgColor = ((int)(fade * 140) << 24); // Semi-transparent black
             // Draw Background Box (Fixing absolute coordinate overflow)
             graphics.fill(startX, y, startX + boxWidth, y + boxHeight, bgColor);
-            graphics.outline(startX, y, boxWidth, boxHeight, (alpha << 24) | 0x000000);
+            graphics.outline(startX, y, boxWidth, boxHeight, (alpha << 24));
 
             // 1. Draw Icon
             if (ticket.skill.getSpriteIcon() != null) {
@@ -138,7 +137,7 @@ public class XpNotificationOverlay {
             // Progress
             graphics.fill(barX, barY, barX + (int)(barWidth * progress), barY + 3, barGreen);
             // Outline
-            graphics.outline(barX - 1, barY - 1, barWidth + 2, 5, (alpha << 24) | 0x000000);
+            graphics.outline(barX - 1, barY - 1, barWidth + 2, 5, (alpha << 24));
 
             // Move Y up for the next notification in the stack (Box height + gap)
             y -= (boxHeight + 4);

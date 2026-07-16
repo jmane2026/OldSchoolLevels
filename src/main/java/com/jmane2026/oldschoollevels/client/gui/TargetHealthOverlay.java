@@ -4,7 +4,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.monster.Giant;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.EntityHitResult;
@@ -22,7 +24,7 @@ public class TargetHealthOverlay {
         Minecraft mc = Minecraft.getInstance();
         if (mc.options.hideGui || mc.player == null || mc.level == null) return;
 
-        // 1. Perform a long-range raycast to find a target (20 blocks)
+        // 1. Perform a long-range Raycast to find a target (20 blocks)
         double range = 20.0;
         Vec3 eyePos = mc.player.getEyePosition(partialTick);
         Vec3 lookVec = mc.player.getViewVector(partialTick);
@@ -37,6 +39,9 @@ public class TargetHealthOverlay {
 
         // 2. Update Cache if looking at a valid entity
         if (entityHit != null && entityHit.getEntity() instanceof LivingEntity target) {
+            // Don't render for Bosses who already have vanilla boss bars
+            if (target instanceof Giant || target.getType() == EntityType.WITHER || target.getType() == EntityType.ENDER_DRAGON) return;
+
             lastEntityId = target.getId();
             lastTargetName = target.getDisplayName().getString();
             lastHealth = target.getHealth();

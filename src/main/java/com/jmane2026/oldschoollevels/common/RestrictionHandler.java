@@ -22,7 +22,6 @@ import net.minecraft.world.level.block.AbstractFurnaceBlock;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -31,7 +30,6 @@ import net.neoforged.neoforge.event.entity.living.LivingEquipmentChangeEvent;
 import net.neoforged.neoforge.event.entity.living.LivingGetProjectileEvent;
 import net.neoforged.neoforge.event.entity.player.ItemFishedEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.entity.player.ArrowLooseEvent;
 import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
@@ -111,7 +109,6 @@ public class RestrictionHandler {
         String heldPath = BuiltInRegistries.ITEM.getKey(held.getItem()).getPath();
 
         if (heldPath.contains("pickaxe")) {
-            int toolMiningReq = RequirementUtils.getRequiredMiningLevel(Blocks.IRON_ORE); // Placeholder logic for tool tier
             // Realistically, we can just check if the player can use the tool material:
             int toolTierReq = RequirementUtils.getRequiredAttackLevel(held);
             if (miningLvl < toolTierReq) {
@@ -129,7 +126,6 @@ public class RestrictionHandler {
 
         // Woodcutting Check
         int wcLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.WOODCUTTING));
-        int reqWc = RequirementUtils.getRequiredWoodcuttingLevel(event.getState().getBlock());
         if (heldPath.contains("_axe")) {
             int toolTierReq = RequirementUtils.getRequiredAttackLevel(held);
             if (wcLvl < toolTierReq) {
@@ -305,7 +301,6 @@ public class RestrictionHandler {
     public static void onPlayerTick(PlayerTickEvent.Pre event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         AbstractContainerMenu menu = player.containerMenu;
-        if (menu == null) return;
 
         SkillData data = player.getData(ModAttachments.SKILLS.get());
         int smithLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.SMITHING));
@@ -428,10 +423,7 @@ public class RestrictionHandler {
         StructureStart startAtEye = player.level().structureManager()
                 .getStructureWithPieceAt(playerEyePos, structureTag);
 
-        if (startAtEye.isValid()) {
-            return true;
-        }
-        return false;
+        return startAtEye.isValid();
     }
 
     private static void ejectItem(ServerPlayer player, Slot slot) {

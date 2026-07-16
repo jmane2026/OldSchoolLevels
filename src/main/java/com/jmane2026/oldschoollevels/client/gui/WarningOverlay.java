@@ -3,7 +3,6 @@ package com.jmane2026.oldschoollevels.client.gui;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
-import net.minecraft.network.chat.Component;
 
 public class WarningOverlay {
     private static String currentWarning = "";
@@ -42,7 +41,7 @@ public class WarningOverlay {
         graphics.pose().pushMatrix();
         graphics.pose().translate((float)centerX, yPos, graphics.pose());
         graphics.pose().scale(1.2f, 1.2f, graphics.pose());
-        graphics.text(mc.font, currentWarning, (int)(-(mc.font.width(currentWarning) / 2)), 0, color);
+        graphics.text(mc.font, currentWarning, (-(mc.font.width(currentWarning) / 2)), 0, color);
         graphics.pose().popMatrix();
     }
 }

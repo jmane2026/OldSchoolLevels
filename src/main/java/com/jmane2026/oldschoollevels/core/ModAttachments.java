@@ -23,7 +23,7 @@ public class ModAttachments {
     public static final Supplier<AttachmentType<SkillData>> SKILLS = ATTACHMENT_TYPES.register(
             "skills",
             () -> AttachmentType.builder(() -> SkillData.EMPTY)
-                    .serialize(SkillData.CODEC.fieldOf("skills"), data -> true)
+                    .serialize(SkillData.CODEC.fieldOf("skills"), _ -> true)
                     .sync(SkillData.STREAM_CODEC)
                     .copyOnDeath()
                     .build()
@@ -32,7 +32,7 @@ public class ModAttachments {
     public static final Supplier<AttachmentType<CombatStyle>> COMBAT_STYLE = ATTACHMENT_TYPES.register(
             "combat_style",
             () -> AttachmentType.builder(() -> CombatStyle.ACCURATE)
-                    .serialize(CombatStyle.CODEC.fieldOf("style"), data -> true)
+                    .serialize(CombatStyle.CODEC.fieldOf("style"), _ -> true)
                     .sync(CombatStyle.STREAM_CODEC)
                     .copyOnDeath()
                     .build()
@@ -55,7 +55,7 @@ public class ModAttachments {
     public static final Supplier<AttachmentType<Spell>> ACTIVE_SPELL = ATTACHMENT_TYPES.register(
             "active_spell",
             () -> AttachmentType.builder(() -> Spell.AIR_BLAST)
-                    .serialize(Spell.CODEC.fieldOf("active_spell"), data -> true)
+                    .serialize(Spell.CODEC.fieldOf("active_spell"), _ -> true)
                     .sync(Spell.STREAM_CODEC)
                     .copyOnDeath()
                     .build()

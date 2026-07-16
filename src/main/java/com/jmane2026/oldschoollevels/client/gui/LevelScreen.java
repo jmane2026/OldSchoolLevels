@@ -1,6 +1,5 @@
 package com.jmane2026.oldschoollevels.client.gui;
 
-import com.jmane2026.oldschoollevels.OldSchoolLevelsClient;
 import com.jmane2026.oldschoollevels.common.Skill;
 import com.jmane2026.oldschoollevels.common.SkillData;
 import com.jmane2026.oldschoollevels.core.ModAttachments;
@@ -16,6 +15,7 @@ import net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPosition
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
+import org.jspecify.annotations.NonNull;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
@@ -43,20 +43,20 @@ public class LevelScreen extends Screen {
         int y = this.height - PANEL_HEIGHT - MARGIN;
 
         // Small "X" button in the top right corner
-        this.addRenderableWidget(Button.builder(Component.literal("X"), (btn) -> this.onClose())
+        this.addRenderableWidget(Button.builder(Component.literal("X"), (_) -> this.onClose())
                 .bounds(x + PANEL_WIDTH - 18, y + 2, 14, 14)
                 .build());
     }
 
     @Override
     public void onClose() {
-        if (this.minecraft != null && this.minecraft.player != null) {
+        if (this.minecraft.player != null) {
             this.minecraft.setScreen(new InventoryScreen(this.minecraft.player));
         }
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
+    public void extractRenderState(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
         // Call super first to ensure the base screen state (background/blur) is handled before our custom UI
         super.extractRenderState(graphics, mouseX, mouseY, a);
 
@@ -64,7 +64,7 @@ public class LevelScreen extends Screen {
         int x = this.width - PANEL_WIDTH - MARGIN;
         int y = this.height - PANEL_HEIGHT - MARGIN;
 
-        // Draw main panel box (OSRS style dark grey background)
+        // Draw main panel box (OSRS style dark gray background)
         graphics.fill(x, y, x + PANEL_WIDTH, y + PANEL_HEIGHT, 0xAA000000);
         graphics.outline(x, y, PANEL_WIDTH, PANEL_HEIGHT, 0xFFFFFFFF); // Solid White Outline
 
@@ -164,7 +164,7 @@ public class LevelScreen extends Screen {
         graphics.pose().pushMatrix();
         graphics.pose().translate(x + PANEL_WIDTH - 8f, ty, graphics.pose());
         graphics.pose().scale(0.85f, 0.85f, graphics.pose());
-        graphics.text(this.font, totalText, (int) (-this.font.width(totalText)), 0, 0xFFFFAA00);
+        graphics.text(this.font, totalText, (-this.font.width(totalText)), 0, 0xFFFFAA00);
         graphics.pose().popMatrix();
 
         // Tooltip Rendering

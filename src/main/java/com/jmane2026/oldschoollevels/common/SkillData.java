@@ -1,10 +1,10 @@
 package com.jmane2026.oldschoollevels.common;
 
 import com.mojang.serialization.Codec;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.codec.ByteBufCodecs;
+import org.jspecify.annotations.NonNull;
 
 import java.util.EnumMap;
 import java.util.Map;
@@ -16,7 +16,7 @@ public record SkillData(Map<Skill, Long> skillExperience) {
     // Manual StreamCodec for Skill enum to avoid valueOf and xmap issues
     public static final StreamCodec<RegistryFriendlyByteBuf, Skill> SKILL_STREAM_CODEC = new StreamCodec<>() {
         @Override
-        public Skill decode(RegistryFriendlyByteBuf buf) {
+        public @NonNull Skill decode(RegistryFriendlyByteBuf buf) {
             return Skill.values()[buf.readVarInt()];
         }
 
@@ -43,7 +43,7 @@ public record SkillData(Map<Skill, Long> skillExperience) {
 
     public static final StreamCodec<RegistryFriendlyByteBuf, SkillData> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.map(
-                    size -> new EnumMap<>(Skill.class),
+                    _ -> new EnumMap<>(Skill.class),
                     SKILL_STREAM_CODEC,
                     ByteBufCodecs.VAR_LONG
             ),

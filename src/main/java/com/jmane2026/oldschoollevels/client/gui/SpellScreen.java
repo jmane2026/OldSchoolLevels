@@ -22,6 +22,7 @@ import net.minecraft.world.entity.player.Player;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
+import org.jspecify.annotations.NonNull;
 import org.lwjgl.glfw.GLFW;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -39,6 +40,23 @@ public class SpellScreen extends Screen {
     private static final int ICON_SIZE = 18;
     private static final int SPACING = 4;
 
+    private boolean canCast(int level, Spell spell)
+    {
+        return level >= spell.getRequiredMagicLevel();
+    }
+
+    private boolean hasCosts(Spell spell, Minecraft mc, ItemStack finalPouch)
+    {
+        return spell.getCosts().stream().allMatch(c -> {
+            assert mc.player != null;
+            int owned = mc.player.getInventory().countItem(c.item().get());
+            if (!finalPouch.isEmpty()) {
+                owned += SigilPouchItem.getSigilCount(finalPouch, c.item().get());
+            }
+            return owned >= c.amount();
+        });
+    }
+
     public SpellScreen(Component title) {
         super(title);
     }
@@ -47,12 +65,12 @@ public class SpellScreen extends Screen {
     protected void init() {
         int x = (this.width - PANEL_WIDTH) / 2;
         int y = (this.height - PANEL_HEIGHT) / 2;
-        this.addRenderableWidget(Button.builder(Component.literal("X"), (btn) -> this.onClose())
+        this.addRenderableWidget(Button.builder(Component.literal("X"), (_) -> this.onClose())
                 .bounds(x + PANEL_WIDTH - 16, y + 2, 14, 14).build());
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         // Background and panel must be drawn BEFORE super call so widgets appear on top
         renderSpellbookBackground(graphics);
         
@@ -86,19 +104,8 @@ public class SpellScreen extends Screen {
         Spell hoveredSpell = null;
 
         for (Spell spell : Spell.values()) {
-            final ItemStack finalPouch = pouch;
-
             boolean isMouseOver = mouseX >= currentX && mouseX < currentX + ICON_SIZE &&
                     mouseY >= currentY && mouseY < currentY + ICON_SIZE;
-
-            boolean canCast = magicLevel >= spell.getRequiredMagicLevel();
-            boolean hasCosts = spell.getCosts().stream().allMatch(c -> {
-                int owned = mc.player.getInventory().countItem(c.item().get());
-                if (!finalPouch.isEmpty()) {
-                    owned += SigilPouchItem.getSigilCount(finalPouch, c.item().get());
-                }
-                return owned >= c.amount();
-            });
 
             // 1. Highlight ACTIVE spell in Yellow
             if (spell.equals(activeSpell)) {
@@ -114,7 +121,7 @@ public class SpellScreen extends Screen {
                 hoveredSpell = spell;
             }
 
-            if (!canCast || !hasCosts) {
+            if (!canCast(magicLevel, spell) || !hasCosts(spell, mc, pouch)) {
                 graphics.fill(currentX, currentY, currentX + ICON_SIZE, currentY + ICON_SIZE, 0x99000000);
             }
 
@@ -180,7 +187,7 @@ public class SpellScreen extends Screen {
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         if (event.button() == 0) {
             Minecraft mc = this.minecraft;
-            if (mc == null || mc.player == null) return super.mouseClicked(event, doubleClick);
+            if (mc.player == null) return super.mouseClicked(event, doubleClick);
 
             double mouseX = event.x();
             double mouseY = event.y();
@@ -202,18 +209,10 @@ public class SpellScreen extends Screen {
             int magicLevel = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MAGIC));
 
             for (Spell spell : Spell.values()) {
-                final ItemStack finalPouch = pouch;
                 if (mouseX >= curX && mouseX < curX + ICON_SIZE && mouseY >= curY && mouseY < curY + ICON_SIZE) {
-
-                    boolean canCast = magicLevel >= spell.getRequiredMagicLevel();
-                    boolean hasCosts = spell.getCosts().stream().allMatch(c -> {
-                        int owned = mc.player.getInventory().countItem(c.item().get());
-                        if (!finalPouch.isEmpty()) owned += SigilPouchItem.getSigilCount(finalPouch, c.item().get());
-                        return owned >= c.amount();
-                    });
-
-                    if (canCast && hasCosts) {
+                    if (canCast(magicLevel, spell) && hasCosts(spell, mc, pouch)) {
                         ClientPacketDistributor.sendToServer(new SelectSpellPayload(spell));
+                        assert mc.level != null;
                         mc.level.playSound(mc.player, mc.player.blockPosition(), SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.MASTER, 1.0f, 1.0f);
                         this.onClose();
                         return true;
@@ -240,7 +239,7 @@ public class SpellScreen extends Screen {
 
     @Override
     public void onClose() {
-        if (this.minecraft != null && this.minecraft.player != null) {
+        if (this.minecraft.player != null) {
             this.minecraft.setScreen(new InventoryScreen(this.minecraft.player));
         }
     }

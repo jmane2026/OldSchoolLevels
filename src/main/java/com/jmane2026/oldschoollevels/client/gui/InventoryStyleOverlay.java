@@ -22,25 +22,19 @@ public class InventoryStyleOverlay {
             Minecraft mc = Minecraft.getInstance();
             if (mc.player == null) return;
             // Character Sheet Button
-            Button statsButton = Button.builder(Component.empty(), (btn) -> {
-                        mc.setScreen(new CharacterStatsScreen());
-                    })
+            Button statsButton = Button.builder(Component.empty(), (_) -> mc.setScreen(new CharacterStatsScreen()))
                     .bounds(inv.getLeftPos() + 77, inv.getTopPos() + 43, 16, 16)
                     .tooltip(Tooltip.create(Component.literal("Character Sheet")))
                     .build();
 
             // Skills Window Button (Experience Bottle icon)
-            Button skillsButton = Button.builder(Component.empty(), (btn) -> {
-                        mc.setScreen(new LevelScreen(Component.literal("Skills")));
-                    })
+            Button skillsButton = Button.builder(Component.empty(), (_) -> mc.setScreen(new LevelScreen(Component.literal("Skills"))))
                     .bounds(inv.getLeftPos() + 77, inv.getTopPos() + 25, 16, 16)
                     .tooltip(Tooltip.create(Component.literal("View Skills")))
                     .build();
 
             // Spellbook Button - Positioned ABOVE the Skills button
-            Button spellbookButton = Button.builder(Component.empty(), b -> {
-                        Minecraft.getInstance().setScreen(new SpellScreen(Component.literal("Spells")));
-                    })
+            Button spellbookButton = Button.builder(Component.empty(), _ -> Minecraft.getInstance().setScreen(new SpellScreen(Component.literal("Spells"))))
                     .bounds(inv.getLeftPos() + 77, inv.getTopPos() + 7, 16, 16)
                     .tooltip(Tooltip.create(Component.literal("Spellbook")))
                     .build();

@@ -8,7 +8,6 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
@@ -39,14 +38,14 @@ public class TeleportScreen extends Screen {
         int btnY = y + HEIGHT - 25;
 
         // Plus Button (Toggle Add Mode)
-        this.addRenderableWidget(Button.builder(Component.literal("+"), (btn) -> {
+        this.addRenderableWidget(Button.builder(Component.literal("+"), (_) -> {
             this.isAdding = !this.isAdding;
             playClickSound();
             this.rebuildWidgets();
         }).bounds(x + 10, btnY, 20, 20).build());
 
         // Minus Button (Remove Selected)
-        Button deleteBtn = Button.builder(Component.literal("-"), (btn) -> {
+        Button deleteBtn = Button.builder(Component.literal("-"), (_) -> {
             if (selectedLocation != null) {
                 ClientPacketDistributor.sendToServer(new TeleportActionPayload("", selectedLocation, TeleportActionPayload.Action.DELETE, isPortal));
                 this.selectedLocation = null;
@@ -58,7 +57,7 @@ public class TeleportScreen extends Screen {
         this.addRenderableWidget(deleteBtn);
 
         // Execute Button (Teleport/Portal)
-        Button goBtn = Button.builder(Component.literal(isPortal ? "Open" : "Go"), (btn) -> {
+        Button goBtn = Button.builder(Component.literal(isPortal ? "Open" : "Go"), (_) -> {
             if (selectedLocation != null) {
                 ClientPacketDistributor.sendToServer(new TeleportActionPayload("", selectedLocation, TeleportActionPayload.Action.EXECUTE, isPortal));
                 this.onClose();
@@ -73,7 +72,7 @@ public class TeleportScreen extends Screen {
             this.addRenderableWidget(nameInput);
             this.setInitialFocus(this.nameInput);
 
-            this.addRenderableWidget(Button.builder(Component.literal("Save"), (btn) -> {
+            this.addRenderableWidget(Button.builder(Component.literal("Save"), (_) -> {
                 if (!nameInput.getValue().isEmpty()) {
                     ClientPacketDistributor.sendToServer(new TeleportActionPayload(nameInput.getValue(), null, TeleportActionPayload.Action.ADD, isPortal));
                     this.isAdding = false;
@@ -84,7 +83,7 @@ public class TeleportScreen extends Screen {
         }
 
         // Small "X" button in top right
-        this.addRenderableWidget(Button.builder(Component.literal("X"), (btn) -> this.onClose())
+        this.addRenderableWidget(Button.builder(Component.literal("X"), (_) -> this.onClose())
                 .bounds(x + WIDTH - 16, y + 2, 14, 14).build());
     }
 
@@ -112,6 +111,7 @@ public class TeleportScreen extends Screen {
 
             // Check if clicking within the list bounds
             if (mouseX >= listX && mouseX <= listX + 130) {
+                assert Minecraft.getInstance().player != null;
                 List<TeleportLocation> locations = Minecraft.getInstance().player.getData(ModAttachments.TELEPORT_LOCATIONS.get());
                 // Each entry is roughly 22 pixels high based on the loop logic
                 int clickedIdx = (int) ((mouseY - listY) / 22);
@@ -145,6 +145,7 @@ public class TeleportScreen extends Screen {
 
         // --- Render List Manually (Not as buttons) ---
         if (!isAdding) {
+            assert Minecraft.getInstance().player != null;
             List<TeleportLocation> locations = Minecraft.getInstance().player.getData(ModAttachments.TELEPORT_LOCATIONS.get());
             int listY = y + 25;
             for (TeleportLocation loc : locations) {

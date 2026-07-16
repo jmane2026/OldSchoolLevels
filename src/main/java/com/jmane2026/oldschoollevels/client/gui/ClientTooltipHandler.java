@@ -30,7 +30,7 @@ public class ClientTooltipHandler {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
-        IAttachmentHolder holder = (IAttachmentHolder) mc.player;
+        IAttachmentHolder holder = mc.player;
         SkillData data = holder.getData(ModAttachments.SKILLS.get());
 
         String path = BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath();

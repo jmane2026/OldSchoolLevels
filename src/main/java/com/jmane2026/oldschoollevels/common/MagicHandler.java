@@ -13,10 +13,15 @@ import com.jmane2026.oldschoollevels.network.CastSpellPayload;
 import com.jmane2026.oldschoollevels.util.ExperienceUtils;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.monster.Giant;
+import net.minecraft.world.entity.monster.zombie.Zombie;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.ClipContext;
@@ -42,6 +47,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
+import net.neoforged.neoforge.event.EventHooks;
 
 import java.util.*;
 
@@ -66,6 +72,7 @@ public class MagicHandler {
         if (event.getButton() == 2) {
             isMiddleMouseDown = event.getAction() == 1; // 1 is Press, 0 is Release
             if (isMiddleMouseDown) {
+                assert Minecraft.getInstance().player != null;
                 Spell active = Minecraft.getInstance().player.getData(ModAttachments.ACTIVE_SPELL.get());
 
                 // Open Teleport/Portal screen directly on client if selected
@@ -153,7 +160,7 @@ public class MagicHandler {
                 success = true;
             }
             case SPAWN_TELEPORT -> {
-                BlockPos spawn = null;
+                BlockPos spawn;
                 ServerPlayer.RespawnConfig config = player.getRespawnConfig();
                 if (config != null) {
                     spawn = config.respawnData().pos();
@@ -175,16 +182,37 @@ public class MagicHandler {
 
                 // 2. Check for Entities (specifically ItemEntities)
                 AABB searchBox = player.getBoundingBox().expandTowards(lookVec.scale(range)).inflate(1.0);
-                EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(player, eyePos, endPos, searchBox, (e) -> e instanceof ItemEntity, range * range);
+                EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(player, eyePos, endPos, searchBox, (e) -> e instanceof ItemEntity || e instanceof Zombie, range * range);
 
                 // Determine closest target
                 boolean hitEntity = entityHit != null && entityHit.getLocation().distanceTo(eyePos) < blockHit.getLocation().distanceTo(eyePos);
 
-                if (hitEntity && entityHit.getEntity() instanceof ItemEntity item) {
+                if (hitEntity) {
+                    Entity target = entityHit.getEntity();
+                    if (target instanceof ItemEntity item) {
                     item.setPos(player.getX(), player.getY(), player.getZ());
                     item.setPickUpDelay(0);
                     player.level().playSound(null, player.blockPosition(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1.0f, 1.0f);
                     success = true;
+                    } else if (target instanceof Zombie zombie && zombie.level() instanceof ServerLevel serverLevel) {
+                        // Ritual: Transform Zombie into Giant
+                        Giant giant = EntityType.GIANT.create(serverLevel, EntitySpawnReason.MOB_SUMMONED);
+                        
+                        if (giant != null) {
+                            // Use snapTo for precise instant placement before adding to level
+                            giant.snapTo(zombie.getX(), zombie.getY() + 0.5, zombie.getZ(), zombie.getYRot(), zombie.getXRot());
+                            giant.setYHeadRot(zombie.getYHeadRot());
+                            // Initialize AI and stats properly
+                            EventHooks.finalizeMobSpawn(giant, serverLevel, serverLevel.getCurrentDifficultyAt(giant.blockPosition()), EntitySpawnReason.MOB_SUMMONED, null);
+                            giant.setHealth(giant.getMaxHealth()); // Ensure health is full before spawning
+
+                            if (serverLevel.addFreshEntity(giant)) {
+                                zombie.discard();
+                                serverLevel.playSound(null, giant.blockPosition(), SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.HOSTILE, 2.0f, 0.5f);
+                                success = true;
+                            }
+                        }
+                    }
                 } else if (blockHit.getType() == HitResult.Type.BLOCK) {
                     BlockPos pos = blockHit.getBlockPos();
                     BlockState state = player.level().getBlockState(pos);
@@ -207,7 +235,7 @@ public class MagicHandler {
                         silkTool.enchant(enchantmentRegistry.getOrThrow(Enchantments.SILK_TOUCH), 1);
 
                         // Simulate breaking and collect drops
-                        List<ItemStack> drops = Block.getDrops(state, (ServerLevel) player.level(), pos, player.level().getBlockEntity(pos), player, silkTool);
+                        List<ItemStack> drops = Block.getDrops(state, player.level(), pos, player.level().getBlockEntity(pos), player, silkTool);
                         player.level().destroyBlock(pos, false);
                         for (ItemStack drop : drops) {
                             if (!player.getInventory().add(drop)) {
@@ -225,27 +253,13 @@ public class MagicHandler {
         }
 
         if (success) {
-            for (Spell.SpellCost cost : spell.getCosts()) {
-                int needed = cost.amount();
-                // Consume from pouch first
-                if (!pouch.isEmpty()) {
-                    int fromPouch = Math.min(needed, SigilPouchItem.getSigilCount(pouch, cost.item().get()));
-                    if (fromPouch > 0) {
-                        SigilPouchItem.consumeSigils(pouch, cost.item().get(), fromPouch);
-                        needed -= fromPouch;
-                    }
-                }
-                // Remaining from inventory
-                if (needed > 0) {
-                    player.getInventory().clearOrCountMatchingItems(p -> p.getItem() == cost.item().get(), needed, player.inventoryMenu.getCraftSlots());
-                }
-            }
+            consumeCosts(player, spell, pouch);
             player.swing(InteractionHand.MAIN_HAND, true);
             COOLDOWNS.put(player.getUUID(), currentTime + 20);
 
             // Award XP based on the spell's defined baseXp (only for utility spells, Blasts are handled in onCombat)
             if (!spell.name().endsWith("_BLAST")) {
-                LevelingHandler.awardXp(player, Skill.MAGIC, (long)spell.getBaseXp());
+                LevelingHandler.awardXp(player, Skill.MAGIC, spell.getBaseXp());
             }
         }
     }
@@ -291,6 +305,11 @@ public class MagicHandler {
         }
 
         // 3. Consume Costs (Pouch Priority)
+        consumeCosts(player, spell, pouch);
+        LevelingHandler.awardXp(player, Skill.MAGIC, spell.getBaseXp());
+    }
+
+    private static void consumeCosts(ServerPlayer player, Spell spell, ItemStack pouch) {
         for (Spell.SpellCost cost : spell.getCosts()) {
             int needed = cost.amount();
             if (!pouch.isEmpty()) {
@@ -304,7 +323,6 @@ public class MagicHandler {
                 player.getInventory().clearOrCountMatchingItems(p -> p.getItem() == cost.item().get(), needed, player.inventoryMenu.getCraftSlots());
             }
         }
-        LevelingHandler.awardXp(player, Skill.MAGIC, spell.getBaseXp());
     }
 
     public static void addLocation(ServerPlayer player, String name) {
@@ -335,7 +353,7 @@ public class MagicHandler {
         return false;
     }
 
-    public static void renderActiveSpell(GuiGraphicsExtractor graphics, DeltaTracker delta) {
+    public static void renderActiveSpell(GuiGraphicsExtractor graphics, DeltaTracker ignoredDelta) {
         Minecraft mc = Minecraft.getInstance();
         // Respect F1 (hideGui) and keep visible even if a screen is open
         if (mc.options.hideGui || mc.player == null || mc.level == null) return;

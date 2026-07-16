@@ -6,6 +6,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
+import org.jspecify.annotations.NonNull;
 
 public record SelectSpellPayload(Spell spell) implements CustomPacketPayload {
     public static final Type<SelectSpellPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath(OldSchoolLevels.MODID, "select_spell"));
@@ -15,5 +16,5 @@ public record SelectSpellPayload(Spell spell) implements CustomPacketPayload {
             buf -> new SelectSpellPayload(buf.readEnum(Spell.class))
     );
 
-    @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
+    @Override public @NonNull Type<? extends CustomPacketPayload> type() { return TYPE; }
 }

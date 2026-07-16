@@ -74,6 +74,14 @@ public class SkillAttributeHandler {
             jump.addTransientModifier(new AttributeModifier(Identifier.fromNamespaceAndPath(OldSchoolLevels.MODID, "mobility_jump"), bonus, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
         }
 
+        AttributeInstance swimSpeed = player.getAttribute(Attributes.WATER_MOVEMENT_EFFICIENCY);
+        if (swimSpeed != null) {
+            swimSpeed.removeModifier(Identifier.fromNamespaceAndPath(OldSchoolLevels.MODID, "mobility_swim_efficiency"));
+            int level = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MOBILITY));
+            double bonus = RequirementUtils.getSwimSpeedBonus(level);
+            swimSpeed.addTransientModifier(new AttributeModifier(Identifier.fromNamespaceAndPath(OldSchoolLevels.MODID, "mobility_swim_efficiency"), bonus, AttributeModifier.Operation.ADD_VALUE));
+        }
+
         AttributeInstance attackSpeed = player.getAttribute(Attributes.ATTACK_SPEED);
         if (attackSpeed != null) {
             attackSpeed.removeModifier(Identifier.fromNamespaceAndPath(OldSchoolLevels.MODID, "attack_speed_bonus"));

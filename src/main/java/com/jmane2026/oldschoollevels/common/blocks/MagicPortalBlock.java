@@ -22,8 +22,10 @@ import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
+import java.util.Objects;
 import java.util.Set;
 
 public class MagicPortalBlock extends Block implements EntityBlock {
@@ -36,7 +38,7 @@ public class MagicPortalBlock extends Block implements EntityBlock {
     }
 
     @Override
-    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+    public @NonNull VoxelShape getShape(@NonNull BlockState state, @NonNull BlockGetter level, @NonNull BlockPos pos, @NonNull CollisionContext context) {
         return SHAPE;
     }
 
@@ -46,7 +48,7 @@ public class MagicPortalBlock extends Block implements EntityBlock {
     }
 
     @Override
-    protected BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess ticks, BlockPos pos, Direction directionToNeighbour, BlockPos neighbourPos, BlockState neighbourState, RandomSource random) {
+    protected @NonNull BlockState updateShape(BlockState state, @NonNull LevelReader level, @NonNull ScheduledTickAccess ticks, @NonNull BlockPos pos, Direction directionToNeighbour, @NonNull BlockPos neighbourPos, @NonNull BlockState neighbourState, @NonNull RandomSource random) {
         DoubleBlockHalf half = state.getValue(HALF);
         if (directionToNeighbour.getAxis() == Direction.Axis.Y && (half == DoubleBlockHalf.LOWER) == (directionToNeighbour == Direction.UP)) {
             if (!neighbourState.is(this) || neighbourState.getValue(HALF) == half) {
@@ -57,7 +59,7 @@ public class MagicPortalBlock extends Block implements EntityBlock {
     }
 
     @Override
-    protected boolean canSurvive(BlockState state, LevelReader level, BlockPos pos) {
+    protected boolean canSurvive(BlockState state, @NonNull LevelReader level, @NonNull BlockPos pos) {
         if (state.getValue(HALF) == DoubleBlockHalf.UPPER) {
             BlockState below = level.getBlockState(pos.below());
             return below.is(this) && below.getValue(HALF) == DoubleBlockHalf.LOWER;
@@ -66,13 +68,13 @@ public class MagicPortalBlock extends Block implements EntityBlock {
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
+    protected @NonNull InteractionResult useWithoutItem(@NonNull BlockState state, Level level, @NonNull BlockPos pos, @NonNull Player player, @NonNull BlockHitResult hitResult) {
         if (!level.isClientSide()) {
             BlockPos masterPos = state.getValue(HALF) == DoubleBlockHalf.LOWER ? pos : pos.below();
             if (level.getBlockEntity(masterPos) instanceof MagicPortalBlockEntity portal) {
                 var loc = portal.getDestination();
                 if (loc != null) {
-                    player.teleportTo(level.getServer().getLevel(loc.dimension()), loc.pos().getX() + 0.5, loc.pos().getY(), loc.pos().getZ() + 0.5, Set.of(), player.getYRot(), player.getXRot(), true);
+                    player.teleportTo(Objects.requireNonNull(Objects.requireNonNull(level.getServer()).getLevel(loc.dimension())), loc.pos().getX() + 0.5, loc.pos().getY(), loc.pos().getZ() + 0.5, Set.of(), player.getYRot(), player.getXRot(), true);
                     return InteractionResult.SUCCESS;
                 }
             }
@@ -82,13 +84,13 @@ public class MagicPortalBlock extends Block implements EntityBlock {
 
     @Nullable
     @Override
-    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+    public BlockEntity newBlockEntity(@NonNull BlockPos pos, BlockState state) {
         return state.getValue(HALF) == DoubleBlockHalf.LOWER ? new MagicPortalBlockEntity(pos, state) : null;
     }
 
     @Nullable
     @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(@NonNull Level level, BlockState state, @NonNull BlockEntityType<T> type) {
         // Only the bottom half needs to tick to manage the timer
         if (state.getValue(HALF) != DoubleBlockHalf.LOWER) return null;
 
@@ -97,5 +99,5 @@ public class MagicPortalBlock extends Block implements EntityBlock {
                 : null;
     }
 
-    @Override protected RenderShape getRenderShape(BlockState state) { return RenderShape.MODEL; }
+    @Override protected @NonNull RenderShape getRenderShape(@NonNull BlockState state) { return RenderShape.MODEL; }
 }

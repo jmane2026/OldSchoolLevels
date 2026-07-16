@@ -20,7 +20,7 @@ public class EchoNavigationOverlay {
 
         // Get synced target from attachment
         BlockPos target = mc.player.getData(ModAttachments.ECHO_TARGET.get());
-        if (target == null || target.equals(BlockPos.ZERO)) return;
+        if (target.equals(BlockPos.ZERO)) return;
 
         // Calculate Angle and Distance
         double dz = target.getZ() - mc.player.getZ();

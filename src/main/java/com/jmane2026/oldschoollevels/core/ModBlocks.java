@@ -20,10 +20,10 @@ public class ModBlocks {
 
     public static final DeferredBlock<MagicPortalBlock> MAGIC_PORTAL = BLOCKS.registerBlock("magic_portal",
             MagicPortalBlock::new,
-            p -> BlockBehaviour.Properties.of()
+            _ -> BlockBehaviour.Properties.of()
                     .noCollision()
                     .noOcclusion()
                     .strength(-1.0f, 3600000.0f)
                     .noLootTable()
-                    .lightLevel(state -> 15));
+                    .lightLevel(_ -> 15));
 }

@@ -9,6 +9,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 public class KnifeItem extends Item {
@@ -17,12 +18,12 @@ public class KnifeItem extends Item {
     }
 
     @Override
-    public void hurtEnemy(ItemStack itemStack, LivingEntity mob, LivingEntity attacker) {
+    public void hurtEnemy(ItemStack itemStack, @NonNull LivingEntity mob, @NonNull LivingEntity attacker) {
         itemStack.hurtAndBreak(1, attacker, EquipmentSlot.MAINHAND);
     }
 
     @Override
-    public boolean mineBlock(ItemStack itemStack, Level level, BlockState state, BlockPos pos, LivingEntity owner) {
+    public boolean mineBlock(@NonNull ItemStack itemStack, Level level, @NonNull BlockState state, @NonNull BlockPos pos, @NonNull LivingEntity owner) {
         if (!level.isClientSide() && state.getDestroySpeed(level, pos) != 0.0F) {
             itemStack.hurtAndBreak(1, owner, owner.getUsedItemHand());
         }
@@ -30,7 +31,7 @@ public class KnifeItem extends Item {
     }
 
     @Override
-    public @Nullable ItemStackTemplate getCraftingRemainder(ItemInstance instance) {
+    public @Nullable ItemStackTemplate getCraftingRemainder(@NonNull ItemInstance instance) {
         // We must convert to ItemStack to manipulate damage, then return as Instance
         if (instance instanceof ItemStack stack) {
             ItemStack remainder = stack.copy();

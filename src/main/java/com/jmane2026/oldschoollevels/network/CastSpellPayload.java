@@ -6,6 +6,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
+import org.jspecify.annotations.NonNull;
 
 public record CastSpellPayload(Spell spell) implements CustomPacketPayload {
     public static final Type<CastSpellPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath(OldSchoolLevels.MODID, "cast_spell"));
@@ -16,5 +17,5 @@ public record CastSpellPayload(Spell spell) implements CustomPacketPayload {
     );
 
     @Override
-    public Type<? extends CustomPacketPayload> type() { return TYPE; }
+    public @NonNull Type<? extends CustomPacketPayload> type() { return TYPE; }
 }

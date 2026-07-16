@@ -9,6 +9,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
+import org.jspecify.annotations.NonNull;
 import org.lwjgl.glfw.GLFW;
 import java.util.List;
 
@@ -32,15 +33,13 @@ public class SkillUnlocksScreen extends Screen {
         int startY = (this.height - HEIGHT) / 2;
 
         // "X" Close Button
-        this.addRenderableWidget(Button.builder(Component.literal("X"), (btn) -> this.onClose())
+        this.addRenderableWidget(Button.builder(Component.literal("X"), (_) -> this.onClose())
                 .bounds(startX + WIDTH - 18, startY + 2, 14, 14).build());
     }
 
     @Override
     public void onClose() {
-        if (this.minecraft != null) {
-            this.minecraft.setScreen(parent);
-        }
+        this.minecraft.setScreen(parent);
     }
 
     @Override
@@ -64,7 +63,7 @@ public class SkillUnlocksScreen extends Screen {
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         int startX = (this.width - WIDTH) / 2;
         int startY = (this.height - HEIGHT) / 2;
 

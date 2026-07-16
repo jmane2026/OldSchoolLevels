@@ -3,13 +3,12 @@ package com.jmane2026.oldschoollevels.common.blocks.entity;
 import com.jmane2026.oldschoollevels.common.TeleportLocation;
 import com.jmane2026.oldschoollevels.core.ModBlockEntities;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import org.jspecify.annotations.NonNull;
 
 public class MagicPortalBlockEntity extends BlockEntity {
     private TeleportLocation destination;
@@ -28,7 +27,7 @@ public class MagicPortalBlockEntity extends BlockEntity {
         return destination;
     }
 
-    public static void tick(Level level, BlockPos pos, BlockState state, MagicPortalBlockEntity be) {
+    public static void tick(Level level, BlockPos pos, BlockState ignoredState, MagicPortalBlockEntity be) {
         if (level.isClientSide()) return;
 
         be.ticksRemaining--;
@@ -40,7 +39,7 @@ public class MagicPortalBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void saveAdditional(ValueOutput output) {
+    protected void saveAdditional(@NonNull ValueOutput output) {
         super.saveAdditional(output);
         output.putInt("ticks_remaining", ticksRemaining);
         if (destination != null) {
@@ -49,7 +48,7 @@ public class MagicPortalBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void loadAdditional(ValueInput input) {
+    protected void loadAdditional(@NonNull ValueInput input) {
         super.loadAdditional(input);
         this.ticksRemaining = input.getInt("ticks_remaining").orElse(2400);
         input.read("destination", TeleportLocation.CODEC).ifPresent(loc -> this.destination = loc);

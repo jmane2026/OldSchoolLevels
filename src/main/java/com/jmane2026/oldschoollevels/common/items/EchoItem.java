@@ -2,9 +2,6 @@ package com.jmane2026.oldschoollevels.common.items;
 
 import com.jmane2026.oldschoollevels.core.ModAttachments;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.GlobalPos;
-import net.minecraft.core.Holder;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -16,12 +13,9 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemInstance;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackTemplate;
-import net.minecraft.world.item.component.LodestoneTracker;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.structure.Structure;
+import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
-
-import java.util.Optional;
 
 public class EchoItem extends Item {
     private final String structureId;
@@ -31,15 +25,11 @@ public class EchoItem extends Item {
         this.structureId = structureId;
     }
 
-    public String getStructureId() {
-        return structureId;
-    }
-
     @Override
-    public void inventoryTick(ItemStack itemStack, ServerLevel level, Entity owner, @Nullable EquipmentSlot slot) {
+    public void inventoryTick(@NonNull ItemStack itemStack, @NonNull ServerLevel level, @NonNull Entity owner, @Nullable EquipmentSlot slot) {
         if (owner instanceof ServerPlayer player) {
             // Check if the item is in the main hand or offhand
-            boolean isSelected = slot != null && (slot == EquipmentSlot.MAINHAND || slot == EquipmentSlot.OFFHAND);
+            boolean isSelected = (slot == EquipmentSlot.MAINHAND || slot == EquipmentSlot.OFFHAND);
 
             if (isSelected) {
                 // Only search for structures every 100 ticks (5 seconds) for performance
@@ -91,26 +81,8 @@ public class EchoItem extends Item {
         }
     }
 
-    private void updateCompassTarget(ItemStack stack, ServerLevel level, BlockPos pos) {
-        // We assume you have a structure tag defined for your domes (e.g., #oldschoollevels:air_domes)
-        TagKey<Structure> structureTag = TagKey.create(Registries.STRUCTURE, 
-                Identifier.fromNamespaceAndPath("oldschoollevels", structureId + "s"));
-
-        // Find the nearest structure on the server
-        BlockPos nearest = level.findNearestMapStructure(structureTag, pos, 100, false);
-
-        if (nearest != null) {
-            // Use the LodestoneTracker component to make the item behave like a compass
-            // We set 'tracked' to false so it doesn't require a physical Lodestone block to be present
-            stack.set(DataComponents.LODESTONE_TRACKER, new LodestoneTracker(
-                    Optional.of(GlobalPos.of(level.dimension(), nearest)), 
-                    false
-            ));
-        }
-    }
-
     @Override
-    public @Nullable ItemStackTemplate getCraftingRemainder(ItemInstance instance) {
+    public @Nullable ItemStackTemplate getCraftingRemainder(@NonNull ItemInstance instance) {
         // We must convert to ItemStack to manipulate damage, then return as Instance
         if (instance instanceof ItemStack stack) {
             // Return the Echo item itself as an ItemStackTemplate, making it non-consumable
@@ -120,5 +92,5 @@ public class EchoItem extends Item {
     }
     
     @Override
-    public boolean isFoil(ItemStack stack) { return true; } // Glow like a compass/talisman
+    public boolean isFoil(@NonNull ItemStack stack) { return true; } // Glow like a compass/talisman
 }

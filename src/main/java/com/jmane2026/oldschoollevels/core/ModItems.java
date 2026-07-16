@@ -8,6 +8,7 @@ import net.minecraft.world.item.*;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
+@SuppressWarnings("unused")
 public class ModItems {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(OldSchoolLevels.MODID);
 

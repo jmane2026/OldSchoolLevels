@@ -40,49 +40,39 @@ public class ModNetworking {
         registrar.playToServer(
                 ChangeStylePayload.TYPE,
                 ChangeStylePayload.STREAM_CODEC,
-                (payload, context) -> {
-                    context.enqueueWork(() -> {
-                        context.player().setData(ModAttachments.COMBAT_STYLE.get(), payload.style());
-                        SkillAttributeHandler.refreshAttributes((ServerPlayer) context.player());
-                    });
-                }
+                (payload, context) -> context.enqueueWork(() -> {
+                    context.player().setData(ModAttachments.COMBAT_STYLE.get(), payload.style());
+                    SkillAttributeHandler.refreshAttributes((ServerPlayer) context.player());
+                })
         );
 
         registrar.playToServer(
                 CastSpellPayload.TYPE,
                 CastSpellPayload.STREAM_CODEC,
-                (payload, context) -> {
-                    context.enqueueWork(() -> {
-                        MagicHandler.castSpell((ServerPlayer) context.player(), payload.spell());
-                    });
-                }
+                (payload, context) -> context.enqueueWork(() -> MagicHandler.castSpell((ServerPlayer) context.player(), payload.spell()))
         );
 
         registrar.playToServer(
                 TeleportActionPayload.TYPE,
                 TeleportActionPayload.STREAM_CODEC,
-                (payload, context) -> {
-                    context.enqueueWork(() -> {
-                        ServerPlayer player = (ServerPlayer) context.player();
-                        if (payload.action() == TeleportActionPayload.Action.ADD) {
-                            MagicHandler.addLocation(player, payload.name());
-                        } else if (payload.action() == TeleportActionPayload.Action.DELETE) {
-                            MagicHandler.deleteLocation(player, payload.location());
-                        } else if (payload.action() == TeleportActionPayload.Action.EXECUTE) {
-                            MagicHandler.handleTeleportRequest(player, payload.location(), payload.isPortal());
-                        }
-                    });
-                }
+                (payload, context) -> context.enqueueWork(() -> {
+                    ServerPlayer player = (ServerPlayer) context.player();
+                    if (payload.action() == TeleportActionPayload.Action.ADD) {
+                        MagicHandler.addLocation(player, payload.name());
+                    } else if (payload.action() == TeleportActionPayload.Action.DELETE) {
+                        MagicHandler.deleteLocation(player, payload.location());
+                    } else if (payload.action() == TeleportActionPayload.Action.EXECUTE) {
+                        MagicHandler.handleTeleportRequest(player, payload.location(), payload.isPortal());
+                    }
+                })
         );
 
         registrar.playToServer(
                 SelectSpellPayload.TYPE,
                 SelectSpellPayload.STREAM_CODEC,
-                (payload, context) -> {
-                    context.enqueueWork(() -> {
-                        context.player().setData(ModAttachments.ACTIVE_SPELL.get(), payload.spell());
-                    });
-                }
+                (payload, context) -> context.enqueueWork(() -> {
+                    context.player().setData(ModAttachments.ACTIVE_SPELL.get(), payload.spell());
+                })
         );
 
         registrar.playToClient(
@@ -95,22 +85,20 @@ public class ModNetworking {
         registrar.playToServer(
                 AdjustPouchPayload.TYPE,
                 AdjustPouchPayload.STREAM_CODEC,
-                (payload, context) -> {
-                    context.enqueueWork(() -> {
-                        ServerPlayer player = (ServerPlayer) context.player();
-                        ItemStack pouch = player.getMainHandItem().getItem() instanceof SigilPouchItem ? player.getMainHandItem() : player.getOffhandItem();
-                        Item sigil = BuiltInRegistries.ITEM.get(Identifier.parse(payload.sigilId()))
-                                .map(Holder::value)
-                                .orElse(Items.AIR);
-                        
-                        if (!pouch.isEmpty() && SigilPouchItem.getSigilCount(pouch, sigil) > 0) {
-                            SigilPouchItem.removeSigils(pouch, sigil, 64);
-                            if (!player.getInventory().add(new ItemStack(sigil, 64))) {
-                                player.drop(new ItemStack(sigil, 64), false);
-                            }
+                (payload, context) -> context.enqueueWork(() -> {
+                    ServerPlayer player = (ServerPlayer) context.player();
+                    ItemStack pouch = player.getMainHandItem().getItem() instanceof SigilPouchItem ? player.getMainHandItem() : player.getOffhandItem();
+                    Item sigil = BuiltInRegistries.ITEM.get(Identifier.parse(payload.sigilId()))
+                            .map(Holder::value)
+                            .orElse(Items.AIR);
+
+                    if (!pouch.isEmpty() && SigilPouchItem.getSigilCount(pouch, sigil) > 0) {
+                        SigilPouchItem.removeSigils(pouch, sigil, 64);
+                        if (!player.getInventory().add(new ItemStack(sigil, 64))) {
+                            player.drop(new ItemStack(sigil, 64), false);
                         }
-                    });
-                }
+                    }
+                })
         );
     }
 }

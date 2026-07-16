@@ -11,6 +11,7 @@ import com.jmane2026.oldschoollevels.network.UnlockNotificationPayload;
 import com.jmane2026.oldschoollevels.network.XpGainPayload;
 import com.jmane2026.oldschoollevels.util.ExperienceUtils;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.entity.monster.Giant;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.food.FoodData;
@@ -167,7 +168,7 @@ public class LevelingHandler {
         if (player.onGround()) {
             WATER_SKIP_ELIGIBILITY.add(player.getUUID());
         }
-        // If your eyes go under water, you've "sunk" and lose eligibility until you touch land again
+        // If your eyes go underwater, you've "sunk" and lose eligibility until you touch land again
         if (player.isEyeInFluid(FluidTags.WATER)) {
             WATER_SKIP_ELIGIBILITY.remove(player.getUUID());
         }
@@ -227,7 +228,7 @@ public class LevelingHandler {
         boolean isNearWaterSurface = player.level().getFluidState(player.blockPosition()).is(FluidTags.WATER) || 
                                     player.level().getFluidState(player.blockPosition().below()).is(FluidTags.WATER);
 
-        if (WATER_SKIP_ELIGIBILITY.contains(player.getUUID()) && isNearWaterSurface && !player.isEyeInFluid(FluidTags.WATER) && player.getLastClientInput().jump() && !player.getAbilities().flying) {
+        if (level >= 80 && WATER_SKIP_ELIGIBILITY.contains(player.getUUID()) && isNearWaterSurface && !player.isEyeInFluid(FluidTags.WATER) && player.getLastClientInput().jump() && !player.getAbilities().flying) {
             long currentTime = player.level().getGameTime();
             if (currentTime > WATER_JUMP_COOLDOWNS.getOrDefault(player.getUUID(), 0L)) {
                 // Water jumping is strenuous; it costs 12.0 stamina
@@ -265,6 +266,11 @@ public class LevelingHandler {
             resetExhaustion(player.getFoodData());
         }
 
+        // Global clamp: Ensure stamina doesn't exceed max (handles level resets/decreases)
+        if (currentStamina > maxStamina) {
+            currentStamina = maxStamina;
+        }
+
         if (isStaminaChanging || currentStamina != oldStamina) {
             player.setData(ModAttachments.STAMINA.get(), currentStamina);
             player.syncData(ModAttachments.STAMINA.get());
@@ -277,18 +283,20 @@ public class LevelingHandler {
             SkillData data = player.getData(ModAttachments.SKILLS.get());
             int level = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MOBILITY));
 
-            if (level < 20) return; // Feature locked until level 20
+            // 1. Award Mobility XP for jumping - available from Level 1
+            awardXp(player, Skill.MOBILITY, 2 + (level / 10));
 
-            // 1. Consume Stamina for jumping (costs 4.0 points)
+            // 2. Consume Stamina for jumping (costs 4.0 points) - available from Level 1
             float currentStamina = player.getData(ModAttachments.STAMINA.get());
             player.setData(ModAttachments.STAMINA.get(), Math.max(0, currentStamina - 4.0f));
             player.syncData(ModAttachments.STAMINA.get());
 
-            // Negate vanilla jump exhaustion immediately
-            resetExhaustion(player.getFoodData());
-
-            // 2. Award Mobility XP for jumping
-            awardXp(player, Skill.MOBILITY, 2 + (level / 10));
+            // 3. Level 20+ Benefits
+            if (level >= 20) {
+                // Negate vanilla jump exhaustion (Expert jumper)
+                resetExhaustion(player.getFoodData());
+                // Note: The jump height boost is handled automatically via Attributes in SkillAttributeHandler
+            }
         }
     }
 
@@ -379,7 +387,10 @@ public class LevelingHandler {
             
             player.setData(ModAttachments.IS_CRITICAL, false); // Reset flag
 
-            // OSRS Scale: ~4 XP per 1 damage point (scaled to MC hearts)
+            // Cap damage for XP calculation to prevent overkill exploits
+            float remainingHealth = event.getEntity().getHealth();
+            damage = Math.min(damage, remainingHealth + damage); // Rough approximation of actual HP removed
+
             long combatXp = Math.round(damage * 4);
             long lifeXp = Math.round(damage * 1.33);
 
@@ -404,6 +415,12 @@ public class LevelingHandler {
             awardXp(player, Skill.LIFE, lifeXp);
         }
 
+        // 1.5 Special Boss XP: Giant Defeat
+        if (event.getEntity() instanceof Giant && event.getSource().getEntity() instanceof ServerPlayer killer) {
+            // Reduced reward to prevent massive level jumps
+            awardXp(killer, Skill.LIFE, 250L);
+        }
+
         // 2. Handle INCOMING Damage (Something hits Player)
         if (event.getEntity() instanceof ServerPlayer victim) {
             float incomingDmg = event.getHealthDamage();
@@ -424,7 +441,7 @@ public class LevelingHandler {
 
     @SubscribeEvent
     public static void onLivingDrops(LivingDropsEvent event) {
-        // Remove vanilla arrows, tipped arrows (Weakness, etc), and spectral arrows from mob drops
+        // Remove vanilla arrows, tipped arrows (Weakness, etc.), and spectral arrows from mob drops
         event.getDrops().removeIf(itemEntity -> {
             ItemStack stack = itemEntity.getItem();
             return stack.is(Items.ARROW) || stack.is(Items.TIPPED_ARROW) || stack.is(Items.SPECTRAL_ARROW) || stack.is(Items.BOW) || stack.is(Items.CROSSBOW);
@@ -469,18 +486,6 @@ public class LevelingHandler {
         }
     }
 
-    private static void checkPouchDivert(ServerPlayer player, ItemStack crafted) {
-        String path = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(crafted.getItem()).getPath();
-        if (!path.contains("_sigil")) return;
-        for (ItemStack s : player.getInventory().getNonEquipmentItems()) {
-            if (s.getItem() instanceof SigilPouchItem) {
-                SigilPouchItem.addSigils(s, crafted.getItem(), crafted.getCount());
-                crafted.setCount(0);
-                return;
-            }
-        }
-    }
-
     @SubscribeEvent
     public static void onCraft(PlayerEvent.ItemCraftedEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
@@ -490,7 +495,7 @@ public class LevelingHandler {
 
             // 1. Handle Stick Fletching (XP based on quantity)
             if (item.is(Items.STICK)) {
-                awardXp(player, Skill.FLETCHING, 1L * count);
+                awardXp(player, Skill.FLETCHING, count);
             }
             
             // 2. Handle Knives
@@ -516,7 +521,6 @@ public class LevelingHandler {
             // 6. Handle Arcana Sigil Crafting
             else if (path.contains("_sigil") && !path.contains("blank")) {
                 awardXp(player, Skill.ARCANA, 12L * count);
-                checkPouchDivert(player, item);
             }
             
             if (isMetalGear(item)) {
@@ -646,7 +650,6 @@ public class LevelingHandler {
     private static float getWoodcuttingSpeedMultiplier(Block block) {
         if (block == Blocks.OAK_LOG || block == Blocks.SPRUCE_LOG || block == Blocks.BIRCH_LOG) return 0.08f; // 8%
         if (block == Blocks.JUNGLE_LOG || block == Blocks.ACACIA_LOG) return 0.06f; // 6%
-        if (block == Blocks.DARK_OAK_LOG || block == Blocks.MANGROVE_LOG || block == Blocks.CHERRY_LOG) return 0.04f; // 4%
 
         return 0.04f;
     }
@@ -678,33 +681,6 @@ public class LevelingHandler {
                 stack.is(Items.COOKED_PORKCHOP) || stack.is(Items.COOKED_MUTTON) ||
                 stack.is(Items.COOKED_COD) || stack.is(Items.COOKED_SALMON) ||
                 stack.is(Items.COOKED_RABBIT);
-    }
-
-    private static boolean isFletchingItem(ItemStack stack) {
-        String path = BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath();
-        return stack.is(Items.ARROW) || stack.is(Items.BOW) || path.contains("bow") || path.contains("arrow");
-    }
-
-    private static long getFletchingXp(ItemStack stack) {
-        String path = BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath();
-        long count = stack.getCount();
-
-        if (stack.is(Items.ARROW)) {
-            // Standard arrows (flint)
-            return 5 * count;
-        }
-        
-        // Handle various arrow types by name
-        if (path.contains("iron_arrow")) return 10 * count;
-        if (path.contains("diamond_arrow")) return 15 * count;
-
-        if (stack.is(Items.BOW)) return 25;
-        
-        // Handle custom wood bows
-        if (path.contains("oak_bow")) return 25;
-        if (path.contains("dark_oak_bow")) return 60;
-
-        return 10;
     }
 
     private static boolean isMetalGear(ItemStack stack) {

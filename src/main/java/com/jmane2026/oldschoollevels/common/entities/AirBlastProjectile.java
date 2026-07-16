@@ -18,6 +18,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import org.jspecify.annotations.NonNull;
 
 public class AirBlastProjectile extends AbstractWindCharge {
     private Spell spellType = Spell.AIR_BLAST;
@@ -34,12 +35,9 @@ public class AirBlastProjectile extends AbstractWindCharge {
         this.setDeltaMovement(direction.scale(1.5)); // Straight line speed
         this.hurtMarked = true; // Ensures immediate client-side sync of the custom velocity
     }
-    public Spell getSpellType() {
-        return this.spellType;
-    }
 
     @Override
-    protected void onHitEntity(EntityHitResult result) {
+    protected void onHitEntity(@NonNull EntityHitResult result) {
         if (this.level() instanceof ServerLevel serverLevel) {
             Entity hit = result.getEntity();
             // Critical: Ensure getOwner() is used so LevelingHandler sees the Player as the attacker
@@ -70,7 +68,7 @@ public class AirBlastProjectile extends AbstractWindCharge {
     }
 
     @Override
-    protected void onHitBlock(BlockHitResult result) {
+    protected void onHitBlock(@NonNull BlockHitResult result) {
         super.onHitBlock(result);
         if (this.level().isClientSide()) return;
 
@@ -96,7 +94,7 @@ public class AirBlastProjectile extends AbstractWindCharge {
     }
 
     @Override
-    protected void onHit(HitResult result) {
+    protected void onHit(@NonNull HitResult result) {
         super.onHit(result);
         if (!this.level().isClientSide()) {
             this.discard();
@@ -107,7 +105,7 @@ public class AirBlastProjectile extends AbstractWindCharge {
     public boolean isNoGravity() { return true; }
 
     @Override
-    protected void explode(Vec3 pos) {
+    protected void explode(@NonNull Vec3 pos) {
         // We don't want the standard wind charge explosion/knockback,
         // so we leave this empty or implement a custom effect.
     }

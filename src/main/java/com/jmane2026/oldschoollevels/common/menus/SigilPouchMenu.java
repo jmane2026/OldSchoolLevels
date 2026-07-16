@@ -12,6 +12,7 @@ import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 
@@ -24,7 +25,7 @@ public class SigilPouchMenu extends AbstractContainerMenu {
     );
 
     // Client constructor
-    public SigilPouchMenu(int containerId, Inventory playerInv, RegistryFriendlyByteBuf buf) {
+    public SigilPouchMenu(int containerId, Inventory playerInv, RegistryFriendlyByteBuf ignoredBuf) {
         this(containerId, playerInv, playerInv.player.getMainHandItem().getItem() instanceof SigilPouchItem
                 ? playerInv.player.getMainHandItem()
                 : playerInv.player.getOffhandItem());
@@ -42,8 +43,8 @@ public class SigilPouchMenu extends AbstractContainerMenu {
         for (int i = 0; i < SIGIL_TYPES.size(); i++) {
             // Y starts at 84 to match the first row of the inventory grid
             this.addSlot(new Slot(pouchContainer, i, -87 + (i % 3 * 26), 84 + (i / 3 * 26)) {
-                @Override public boolean mayPlace(ItemStack stack) { return false; }
-                @Override public boolean mayPickup(Player player) { return false; }
+                @Override public boolean mayPlace(@NonNull ItemStack stack) { return false; }
+                @Override public boolean mayPickup(@NonNull Player player) { return false; }
             });
         }
 
@@ -61,7 +62,7 @@ public class SigilPouchMenu extends AbstractContainerMenu {
     }
 
     @Override
-    public void clicked(int slotId, int button, ContainerInput clickType, Player player) {
+    public void clicked(int slotId, int button, @NonNull ContainerInput clickType, @NonNull Player player) {
         // Handle interaction with Virtual Pouch Slots
         if (slotId >= 0 && slotId < SIGIL_TYPES.size()) {
             Item sigil = SIGIL_TYPES.get(slotId);
@@ -86,7 +87,7 @@ public class SigilPouchMenu extends AbstractContainerMenu {
     }
 
     @Override
-    public ItemStack quickMoveStack(Player player, int index) {
+    public @NonNull ItemStack quickMoveStack(@NonNull Player player, int index) {
         Slot slot = this.slots.get(index);
         if (slot.hasItem()) {
             ItemStack stack = slot.getItem();

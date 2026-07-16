@@ -3,7 +3,6 @@ package com.jmane2026.oldschoollevels.common;
 import com.jmane2026.oldschoollevels.core.ModBlocks;
 import com.jmane2026.oldschoollevels.core.ModItems;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ItemLike;
@@ -155,6 +154,12 @@ public class RequirementUtils {
 
     public static float getMovementSpeedBonus(int level) {
         return (level - 1) * 0.01f; // 1% faster per level
+    }
+
+    public static float getSwimSpeedBonus(int level) {
+        if (level < 45) return 0.0f;
+        // Scaled to fit 0.0 - 1.0 range of WATER_MOVEMENT_EFFICIENCY
+        return Math.min(1.0f, (level - 45) * 0.02f); // 2% efficiency per level above 45
     }
 
     public static float getJumpBoost(int level) {
@@ -382,8 +387,9 @@ public class RequirementUtils {
 
     private static void populateMobilityUnlocks(List<UnlockInfo> unlocks) {
         unlocks.add(new UnlockInfo(1, "Speed Scaling", new ItemStack(Items.LEATHER_BOOTS)));
-        unlocks.add(new UnlockInfo(20, "Jump Scaling", new ItemStack(Items.RABBIT_FOOT)));
-        unlocks.add(new UnlockInfo(40, "Fall Reduction", new ItemStack(Items.FEATHER)));
+        unlocks.add(new UnlockInfo(15, "Jump Scaling", new ItemStack(Items.RABBIT_FOOT)));
+        unlocks.add(new UnlockInfo(30, "Fall Reduction", new ItemStack(Items.FEATHER)));
+        unlocks.add(new UnlockInfo(45, "Swim Speed", new ItemStack(Items.PRISMARINE_SHARD)));
         unlocks.add(new UnlockInfo(60, "Wall Jumping", new ItemStack(Items.GOAT_HORN)));
         unlocks.add(new UnlockInfo(80, "Water Striding", new ItemStack(Items.LILY_PAD)));
     }

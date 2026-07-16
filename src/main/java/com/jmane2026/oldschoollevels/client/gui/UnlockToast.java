@@ -9,6 +9,7 @@ import net.minecraft.client.gui.components.toasts.ToastManager;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
+import org.jspecify.annotations.NonNull;
 
 public class UnlockToast implements Toast {
     private final Skill skill;
@@ -23,12 +24,12 @@ public class UnlockToast implements Toast {
     }
 
     @Override
-    public void update(ToastManager toastManager, long timeSinceLastVisible) {
+    public void update(@NonNull ToastManager toastManager, long timeSinceLastVisible) {
         this.visibility = timeSinceLastVisible >= 5000L ? Visibility.HIDE : Visibility.SHOW;
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor graphics, Font font, long timeSinceLastVisible) {
+    public void extractRenderState(GuiGraphicsExtractor graphics, @NonNull Font font, long timeSinceLastVisible) {
         // Draw background box
         graphics.fill(0, 0, this.width(), 32, 0xCC111115);
         graphics.outline(0, 0, this.width(), 32, 0xFFFFFFFF);
@@ -55,7 +56,7 @@ public class UnlockToast implements Toast {
     }
 
     @Override
-    public Visibility getWantedVisibility() {
+    public @NonNull Visibility getWantedVisibility() {
         return this.visibility;
     }
 
@@ -69,5 +70,5 @@ public class UnlockToast implements Toast {
     }
 
     @Override
-    public Object getToken() { return skill; }
+    public @NonNull Object getToken() { return skill; }
 }

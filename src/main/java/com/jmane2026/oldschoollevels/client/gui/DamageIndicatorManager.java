@@ -2,7 +2,6 @@ package com.jmane2026.oldschoollevels.client.gui;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import org.joml.Matrix3x2f;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,7 +29,7 @@ public class DamageIndicatorManager {
             // Randomize trajectory slightly for "scatter" effect
             float randX = (float) Math.random() * 1.5f;
             this.vx = isIncoming ? -1.2f - randX : 1.2f + randX;
-            this.vy = -1.5f - (float) Math.random() * 1.0f; // Much lower upward burst for gradual slope
+            this.vy = -1.5f - (float) Math.random(); // Much lower upward burst for gradual slope
         }
 
         public void tick() {

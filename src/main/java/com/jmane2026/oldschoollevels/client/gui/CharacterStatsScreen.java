@@ -16,10 +16,8 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.attachment.IAttachmentHolder;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
+import org.jspecify.annotations.NonNull;
 import org.lwjgl.glfw.GLFW;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class CharacterStatsScreen extends Screen {
     private static final int WIDTH = 190;
@@ -36,25 +34,22 @@ public class CharacterStatsScreen extends Screen {
         int startX = centerX - (WIDTH / 2);
         int startY = centerY - (HEIGHT / 2);
 
-        IAttachmentHolder holder = (IAttachmentHolder) Minecraft.getInstance().player;
+        IAttachmentHolder holder = Minecraft.getInstance().player;
         if (holder == null) return;
-
-        int x = startX;
-        int y = startY;
 
         // Add Style Selection Buttons
         CombatStyle[] styles = CombatStyle.values();
         for (int i = 0; i < styles.length; i++) {
             CombatStyle style = styles[i];
-            this.addRenderableWidget(Button.builder(style.getName(), (btn) -> {
+            this.addRenderableWidget(Button.builder(style.getName(), (_) -> {
                 holder.setData(ModAttachments.COMBAT_STYLE.get(), style);
                 ClientPacketDistributor.sendToServer(new ChangeStylePayload(style));
             }).bounds(startX + 10, startY + 30 + (i * 22), 160, 20).build());
         }
 
         // Small "X" button in the top right corner
-        this.addRenderableWidget(Button.builder(Component.literal("X"), (btn) -> this.onClose())
-                .bounds(x + WIDTH - 18, y + 2, 14, 14)
+        this.addRenderableWidget(Button.builder(Component.literal("X"), (_) -> this.onClose())
+                .bounds(startX + WIDTH - 18, startY + 2, 14, 14)
                 .build());
     }
 
@@ -69,17 +64,17 @@ public class CharacterStatsScreen extends Screen {
 
     @Override
     public void onClose() {
-        if (this.minecraft != null && this.minecraft.player != null) {
+        if (this.minecraft.player != null) {
             this.minecraft.setScreen(new InventoryScreen(this.minecraft.player));
         }
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         // Extraction of widgets happens first so they are rendered behind the background
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
 
-        IAttachmentHolder holder = (IAttachmentHolder) Minecraft.getInstance().player;
+        IAttachmentHolder holder = Minecraft.getInstance().player;
         if (holder == null) return;
 
         SkillData data = holder.getData(ModAttachments.SKILLS.get());
@@ -113,11 +108,13 @@ public class CharacterStatsScreen extends Screen {
         renderStat(graphics, "Magic Bonus:", getMagicBonus(data), startX + 15, combatY + 62);
         
         int mobilityY = combatY + 72;
-        renderStat(graphics, "Move Speed:", String.format("+%d%%", ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MOBILITY)) - 1), startX + 15, mobilityY);
-        renderStat(graphics, "Max Stamina:", String.format("%.0f", RequirementUtils.getMaxStamina(ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MOBILITY)))), startX + 15, mobilityY + 10);
+        int mobLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MOBILITY));
+        renderStat(graphics, "Move Speed:", String.format("+%.1f%%", (mobLvl - 1) * 1.5f), startX + 15, mobilityY);
+        renderStat(graphics, "Swim Speed:", String.format("+%d%%", (int)(RequirementUtils.getSwimSpeedBonus(mobLvl) * 100)), startX + 15, mobilityY + 10);
+        renderStat(graphics, "Max Stamina:", String.format("%.0f", RequirementUtils.getMaxStamina(mobLvl)), startX + 15, mobilityY + 20);
 
         // Gathering Section
-        int gatherY = mobilityY + 22;
+        int gatherY = mobilityY + 32;
         graphics.text(this.font, "Gathering Bonuses:", startX + 10, gatherY, 0xFFBBBBBB);
 
         int miningLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MINING));

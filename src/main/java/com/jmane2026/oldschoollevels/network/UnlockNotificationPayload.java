@@ -7,6 +7,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
+import org.jspecify.annotations.NonNull;
 
 public record UnlockNotificationPayload(Skill skill, int level, String description, ItemStack icon) implements CustomPacketPayload {
     public static final Type<UnlockNotificationPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath(OldSchoolLevels.MODID, "unlock_notification"));
@@ -17,5 +18,5 @@ public record UnlockNotificationPayload(Skill skill, int level, String descripti
     );
 
     @Override
-    public Type<? extends CustomPacketPayload> type() { return TYPE; }
+    public @NonNull Type<? extends CustomPacketPayload> type() { return TYPE; }
 }
