@@ -32,7 +32,7 @@ public class RequirementUtils {
         if (block == Blocks.ACACIA_LOG || block == Blocks.ACACIA_WOOD) return 45;
         if (block == Blocks.DARK_OAK_LOG || block == Blocks.DARK_OAK_WOOD) return 60;
         if (block == Blocks.MANGROVE_LOG || block == Blocks.MANGROVE_WOOD) return 70;
-        if (block == Blocks.CHERRY_LOG || block == Blocks.CHERRY_WOOD) return 85;
+        if (block == Blocks.CHERRY_LOG || block == Blocks.CHERRY_WOOD || block == Blocks.PALE_OAK_LOG || block == Blocks.PALE_OAK_WOOD) return 85;
         return 1;
     }
 
@@ -52,7 +52,7 @@ public class RequirementUtils {
 
     public static int getRequiredAttackLevel(ItemStack stack) {
         String path = BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath();
-        if (!isTool(path) && !path.contains("sword") && !path.contains("_knife")) return 1;
+        if (!isTool(path) && !path.contains("sword") && !path.contains("_knife") && !path.contains("spear")) return 1;
 
         if (path.contains("copper")) return 5;
         if (path.contains("iron")) return 30;
@@ -349,7 +349,7 @@ public class RequirementUtils {
         unlocks.add(new UnlockInfo(45, "Acacia Trees", new ItemStack(Blocks.ACACIA_LOG)));
         unlocks.add(new UnlockInfo(60, "Dark Oak Trees", new ItemStack(Blocks.DARK_OAK_LOG)));
         unlocks.add(new UnlockInfo(75, "Mangrove Trees", new ItemStack(Blocks.MANGROVE_LOG)));
-        unlocks.add(new UnlockInfo(85, "Cherry Trees", new ItemStack(Blocks.CHERRY_LOG)));
+        unlocks.add(new UnlockInfo(85, "Cherry & Pale Oak", new ItemStack(Blocks.PALE_OAK_LOG)));
     }
 
     private static void populateFishingUnlocks(List<UnlockInfo> unlocks) {

@@ -2,8 +2,8 @@ package com.jmane2026.oldschoollevels.common;
 
 import com.jmane2026.oldschoollevels.OldSchoolLevels;
 import com.jmane2026.oldschoollevels.common.items.EchoItem;
-import com.jmane2026.oldschoollevels.client.gui.WarningOverlay;
 import com.jmane2026.oldschoollevels.core.ModAttachments;
+import com.jmane2026.oldschoollevels.network.WarningPayload;
 import com.jmane2026.oldschoollevels.util.ExperienceUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -35,6 +35,8 @@ import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
 import net.minecraft.world.level.levelgen.structure.StructureStart;
+import net.neoforged.neoforge.network.PacketDistributor;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -83,7 +85,7 @@ public class RestrictionHandler {
         }
 
         if (!missingReqs.isEmpty()) {
-            WarningOverlay.showWarning("Requires: " + String.join(", ", missingReqs));
+            PacketDistributor.sendToPlayer(player, new WarningPayload("Requires: " + String.join(", ", missingReqs)));
         }
     }
 
@@ -119,7 +121,7 @@ public class RestrictionHandler {
         }
 
         if (miningLvl < reqMining) {
-            WarningOverlay.showWarning("Requires Level " + reqMining + " Mining");
+            PacketDistributor.sendToPlayer(player, new WarningPayload("Requires Level " + reqMining + " Mining"));
             event.setCanceled(true);
             return;
         }
@@ -129,7 +131,7 @@ public class RestrictionHandler {
         if (heldPath.contains("_axe")) {
             int toolTierReq = RequirementUtils.getRequiredAttackLevel(held);
             if (wcLvl < toolTierReq) {
-                WarningOverlay.showWarning("Requires Level " + toolTierReq + " Woodcutting");
+                PacketDistributor.sendToPlayer(player, new WarningPayload("Requires Level " + toolTierReq + " Woodcutting"));
                 event.setCanceled(true);
             }
         }
@@ -138,7 +140,7 @@ public class RestrictionHandler {
         int rangedLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.RANGED));
         int reqRanged = RequirementUtils.getRequiredRangedLevel(held);
         if (rangedLvl < reqRanged && heldPath.contains("_bow")) {
-            WarningOverlay.showWarning("Requires Level " + reqRanged + " Ranged");
+            PacketDistributor.sendToPlayer(player, new WarningPayload("Requires Level " + reqRanged + " Ranged"));
             event.setCanceled(true);
         }
     }
@@ -186,7 +188,7 @@ public class RestrictionHandler {
         }
 
         if (!missing.isEmpty()) {
-            WarningOverlay.showWarning("Requires: " + String.join(", ", missing));
+            PacketDistributor.sendToPlayer(player, new WarningPayload("Requires: " + String.join(", ", missing)));
             
             // Force unequip: Try to put it in inventory, otherwise drop it
             EquipmentSlot slot = event.getSlot();
@@ -255,7 +257,7 @@ public class RestrictionHandler {
         int reqRanged = RequirementUtils.getRequiredRangedLevel(ammo);
 
         if (rangedLvl < reqRanged) {
-            WarningOverlay.showWarning("Requires Level " + reqRanged + " Ranged to use these arrows");
+            PacketDistributor.sendToPlayer(player, new WarningPayload("Requires Level " + reqRanged + " Ranged to use these arrows"));
             event.setCanceled(true);
         }
     }
@@ -274,7 +276,7 @@ public class RestrictionHandler {
             
             // 1. Restriction Check
             if (fishLvl < req) {
-                WarningOverlay.showWarning("Requires Level " + req + " Fishing");
+                PacketDistributor.sendToPlayer(player, new WarningPayload("Requires Level " + req + " Fishing"));
                 continue; // Remove the item
             }
 
@@ -347,7 +349,7 @@ public class RestrictionHandler {
                     }
 
                     menu.broadcastChanges();
-                    WarningOverlay.showWarning("Requires Level " + Math.max(reqSmith, reqCook));
+                    PacketDistributor.sendToPlayer(player, new WarningPayload("Requires Level " + Math.max(reqSmith, reqCook)));
                     return;
                 }
             }
@@ -377,14 +379,14 @@ public class RestrictionHandler {
                 // Element Proximity Check for Sigil Conversion
                 if (path.contains("_sigil") && !path.contains("blank") && !path.contains("raw")) {
                     if (!isNearElementalDome(player, path)) {
-                        WarningOverlay.showWarning("You are not in the correct location to imbue this Sigil");
+                        PacketDistributor.sendToPlayer(player, new WarningPayload("You are not in the correct location to imbue this Sigil"));
                         restricted = true;
                         } else if (restricted) {
                         // If they ARE in the dome but lack the level, show the level requirement
-                        WarningOverlay.showWarning("Requires: " + String.join(", ", missing));
+                        PacketDistributor.sendToPlayer(player, new WarningPayload("Requires: " + String.join(", ", missing)));
                         }
                     } else if (restricted) {
-                    WarningOverlay.showWarning("Requires: " + String.join(", ", missing));
+                    PacketDistributor.sendToPlayer(player, new WarningPayload("Requires: " + String.join(", ", missing)));
                 }
 
                 if (restricted) {

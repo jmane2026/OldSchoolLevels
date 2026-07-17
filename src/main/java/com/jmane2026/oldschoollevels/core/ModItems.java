@@ -30,6 +30,7 @@ public class ModItems {
     public static final DeferredItem<Item> DARK_OAK_BOW = ITEMS.registerItem("dark_oak_bow", BowItem::new, p -> p.durability(800));
     public static final DeferredItem<Item> MANGROVE_BOW = ITEMS.registerItem("mangrove_bow", BowItem::new, p -> p.durability(950));
     public static final DeferredItem<Item> CHERRY_BOW = ITEMS.registerItem("cherry_bow", BowItem::new, p -> p.durability(1100));
+    public static final DeferredItem<Item> PALE_OAK_BOW = ITEMS.registerItem("pale_oak_bow", BowItem::new, p -> p.durability(1100));
 
     // Arrows
     public static final DeferredItem<Item> FLINT_ARROW = ITEMS.registerItem("flint_arrow", ArrowItem::new, p -> p);

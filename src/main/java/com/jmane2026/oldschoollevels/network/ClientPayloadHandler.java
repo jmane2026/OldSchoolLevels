@@ -2,6 +2,7 @@ package com.jmane2026.oldschoollevels.network;
 
 import com.jmane2026.oldschoollevels.client.gui.DamageIndicatorManager;
 import com.jmane2026.oldschoollevels.client.gui.UnlockToast;
+import com.jmane2026.oldschoollevels.client.gui.WarningOverlay;
 import com.jmane2026.oldschoollevels.client.gui.XpNotificationOverlay;
 import net.minecraft.client.Minecraft;
 
@@ -20,5 +21,9 @@ public class ClientPayloadHandler {
 
     public static void handleUnlock(UnlockNotificationPayload payload) {
         UnlockToast.add(Minecraft.getInstance().getToastManager(), payload.skill(), payload.description(), payload.icon());
+    }
+
+    public static void handleWarning(WarningPayload payload) {
+        WarningOverlay.showWarning(payload.message());
     }
 }

@@ -2,7 +2,6 @@ package com.jmane2026.oldschoollevels.common;
 
 import com.jmane2026.oldschoollevels.OldSchoolLevels;
 import com.jmane2026.oldschoollevels.client.gui.TeleportScreen;
-import com.jmane2026.oldschoollevels.client.gui.WarningOverlay;
 import com.jmane2026.oldschoollevels.common.blocks.entity.MagicPortalBlockEntity;
 import com.jmane2026.oldschoollevels.common.entities.AirBlastProjectile;
 import com.jmane2026.oldschoollevels.common.items.SigilPouchItem;
@@ -10,6 +9,7 @@ import com.jmane2026.oldschoollevels.core.ModAttachments;
 import com.jmane2026.oldschoollevels.core.ModBlocks;
 import com.jmane2026.oldschoollevels.core.ModEntities;
 import com.jmane2026.oldschoollevels.network.CastSpellPayload;
+import com.jmane2026.oldschoollevels.network.WarningPayload;
 import com.jmane2026.oldschoollevels.util.ExperienceUtils;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -48,6 +48,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import net.neoforged.neoforge.event.EventHooks;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.*;
 
@@ -102,7 +103,7 @@ public class MagicHandler {
         int magicLevel = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MAGIC));
 
         if (magicLevel < spell.getRequiredMagicLevel()) {
-            WarningOverlay.showWarning("Requires Level " + spell.getRequiredMagicLevel() + " Magic");
+            PacketDistributor.sendToPlayer(player, new WarningPayload("Requires Level " + spell.getRequiredMagicLevel() + " Magic"));
             return;
         }
 
@@ -117,7 +118,7 @@ public class MagicHandler {
             int inInv = player.getInventory().countItem(cost.item().get());
             
             if (inPouch + inInv < cost.amount()) {
-                 WarningOverlay.showWarning("Missing: " + Component.translatable(cost.item().get().getDescriptionId()).getString());
+                PacketDistributor.sendToPlayer(player, new WarningPayload("Missing: " + Component.translatable(cost.item().get().getDescriptionId()).getString()));
                  return;
             }
         }
@@ -225,7 +226,7 @@ public class MagicHandler {
                         int reqWc = RequirementUtils.getRequiredWoodcuttingLevel(state.getBlock());
 
                         if (miningLvl < reqMining || wcLvl < reqWc) {
-                            WarningOverlay.showWarning("Your Skill levels are too low to move this block");
+                            PacketDistributor.sendToPlayer(player, new WarningPayload("Your Skill levels are too low to move this block"));
                             return;
                         }
 
@@ -283,7 +284,7 @@ public class MagicHandler {
             BlockPos topPos = pos.above();
             // Ensure space is clear before spawning
             if (!player.level().getBlockState(pos).canBeReplaced() || !player.level().getBlockState(topPos).canBeReplaced()) {
-                WarningOverlay.showWarning("Not enough space to create a Portal");
+                PacketDistributor.sendToPlayer(player, new WarningPayload("Not enough space to create a Portal"));
                 return;
             }
 
@@ -349,7 +350,7 @@ public class MagicHandler {
             return true;
         }
         // Use description ID to ensure the item name renders correctly
-        WarningOverlay.showWarning("Missing: " + Component.translatable(from.getDescriptionId()).getString());
+        PacketDistributor.sendToPlayer(player, new WarningPayload("Missing: " + Component.translatable(from.getDescriptionId()).getString()));
         return false;
     }
 

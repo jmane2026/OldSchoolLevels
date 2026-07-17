@@ -35,11 +35,12 @@ import net.neoforged.neoforge.event.entity.living.LivingFallEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
 import net.neoforged.neoforge.event.entity.player.ItemFishedEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
+import net.neoforged.neoforge.event.level.BlockDropsEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent;
 import net.minecraft.util.TriState;
+import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
 import net.minecraft.world.phys.*;
 
 import java.lang.reflect.Field;
@@ -302,13 +303,9 @@ public class LevelingHandler {
             float currentStamina = player.getData(ModAttachments.STAMINA.get());
             player.setData(ModAttachments.STAMINA.get(), Math.max(0, currentStamina - 4.0f));
             player.syncData(ModAttachments.STAMINA.get());
-
-            // 3. Level 20+ Benefits
-            if (level >= 20) {
-                // Negate vanilla jump exhaustion (Expert jumper)
-                resetExhaustion(player.getFoodData());
-                // Note: The jump height boost is handled automatically via Attributes in SkillAttributeHandler
-            }
+            
+            // Decouple hunger from jumping from level 1
+            resetExhaustion(player.getFoodData());
         }
     }
 
@@ -325,12 +322,22 @@ public class LevelingHandler {
     }
 
     @SubscribeEvent
-    public static void onBlockBreak(BreakBlockEvent event) {
-        if (!(event.getPlayer() instanceof ServerPlayer player)) return;
+    public static void onBlockDrops(BlockDropsEvent event) {
+        if (!(event.getBreaker() instanceof ServerPlayer player)) return;
 
         BlockState state = event.getState();
         Block block = state.getBlock();
 
+        // 1. Generic Furnace XP Logic (Check contents before block is destroyed)
+        if (player.level().getBlockEntity(event.getPos()) instanceof AbstractFurnaceBlockEntity furnace) {
+            ItemStack output = furnace.getItem(2); // Slot 2 is standard output
+            if (!output.isEmpty()) {
+                if (isFood(output)) awardXp(player, Skill.COOKING, getFoodXp(output) * output.getCount());
+                else awardXp(player, Skill.SMITHING, getSmithingXp(output) * output.getCount());
+            }
+        }
+
+        // 2. Gathering XP (Caught by BlockDropsEvent to support Vein Mining)
         if (state.is(BlockTags.MINEABLE_WITH_PICKAXE)) {
             awardXp(player, Skill.MINING, getMiningXp(block));
         }
@@ -466,16 +473,8 @@ public class LevelingHandler {
             ItemStack item = event.getSmelting();
             if (isFood(item)) {
                 awardXp(player, Skill.COOKING, getFoodXp(item) * item.getCount());
-            } else if (item.is(Items.COPPER_INGOT)) {
-                awardXp(player, Skill.SMITHING, 15L * item.getCount());
-            } else if (item.is(Items.IRON_INGOT)) {
-                awardXp(player, Skill.SMITHING, 25L * item.getCount());
-            } else if (item.is(Items.GOLD_INGOT)) {
-                awardXp(player, Skill.SMITHING, 40L * item.getCount());
-            } else if (item.is(ModItems.BLANK_SIGIL.get())) {
-                awardXp(player, Skill.SMITHING, 5L * item.getCount());
-            } else if (item.is(Items.NETHERITE_SCRAP)) {
-                awardXp(player, Skill.SMITHING, 100L * item.getCount());
+            } else {
+                awardXp(player, Skill.SMITHING, getSmithingXp(item) * item.getCount());
             }
         }
     }
@@ -535,7 +534,7 @@ public class LevelingHandler {
                 awardXp(player, Skill.ARCANA, 12L * count);
             }
             
-            if (isMetalGear(item)) {
+            if (isMetalGear(item) || path.contains("spear")) {
                 awardXp(player, Skill.SMITHING, 50L);
             }
         }
@@ -601,6 +600,16 @@ public class LevelingHandler {
         player.setData(ModAttachments.SKILLS, newData);
         player.syncData(ModAttachments.SKILLS.get());
         SkillAttributeHandler.refreshAttributes(player);
+    }
+
+    private static long getSmithingXp(ItemStack stack) {
+        if (stack.is(ModItems.BLANK_SIGIL.get())) return 5L;
+        if (stack.is(Items.COPPER_INGOT)) return 15L;
+        if (stack.is(Items.IRON_INGOT)) return 25L;
+        if (stack.is(Items.GOLD_INGOT)) return 40L;
+        if (stack.is(Items.NETHERITE_SCRAP)) return 100L;
+        
+        return 0L;
     }
 
     private static long getMiningXp(Block block) {

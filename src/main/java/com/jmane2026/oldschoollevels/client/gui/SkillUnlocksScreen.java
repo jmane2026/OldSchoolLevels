@@ -93,8 +93,8 @@ public class SkillUnlocksScreen extends Screen {
             if (this.skill == Skill.MAGIC) {
                 for (Spell spell : Spell.values()) {
                     if (unlock.description().equals(spell.getDisplayName())) {
-                        graphics.blit(RenderPipelines.GUI_TEXTURED, spell.getIconTexture(), 
-                                0, 0, 0.0f, 0.0f, 16, 16, 32, 32, 32, 32, -1);
+                        graphics.blit(RenderPipelines.GUI_TEXTURED, spell.getIconTexture(),
+                                0, 0, 0.0f, 0.0f, 16, 16, 16, 16, 16, 16, -1);
                         renderedCustom = true;
                         break;
                     }

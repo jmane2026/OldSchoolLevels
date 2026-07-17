@@ -37,6 +37,19 @@ public class ModNetworking {
                         ClientPayloadHandler.handleDamageSplat(payload))
         );
 
+        registrar.playToClient(
+                UnlockNotificationPayload.TYPE,
+                UnlockNotificationPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() ->
+                        ClientPayloadHandler.handleUnlock(payload))
+        );
+
+        registrar.playToClient(
+                WarningPayload.TYPE,
+                WarningPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> ClientPayloadHandler.handleWarning(payload))
+        );
+
         registrar.playToServer(
                 ChangeStylePayload.TYPE,
                 ChangeStylePayload.STREAM_CODEC,
@@ -73,13 +86,6 @@ public class ModNetworking {
                 (payload, context) -> context.enqueueWork(() -> {
                     context.player().setData(ModAttachments.ACTIVE_SPELL.get(), payload.spell());
                 })
-        );
-
-        registrar.playToClient(
-                UnlockNotificationPayload.TYPE,
-                UnlockNotificationPayload.STREAM_CODEC,
-                (payload, context) -> context.enqueueWork(() -> 
-                        ClientPayloadHandler.handleUnlock(payload))
         );
 
         registrar.playToServer(
