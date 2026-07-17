@@ -16,9 +16,9 @@ import java.util.List;
 public class SkillUnlocksScreen extends Screen {
     private final Skill skill;
     private final Screen parent;
-    private static final int WIDTH = 200;
-    private static final int HEIGHT = 220;
-    private static final int VISIBLE_ITEMS = 8;
+    private static final int WIDTH = 170;
+    private static final int HEIGHT = 180;
+    private static final int VISIBLE_ITEMS = 9;
     private int scrollOffset = 0;
 
     public SkillUnlocksScreen(Skill skill, Screen parent) {
@@ -74,7 +74,8 @@ public class SkillUnlocksScreen extends Screen {
         graphics.text(this.font, this.title, startX + (WIDTH / 2) - (font.width(this.title) / 2), startY + 10, 0xFFFFAA00);
 
         List<RequirementUtils.UnlockInfo> unlocks = RequirementUtils.getUnlocksForSkill(skill);
-        int yPos = startY + 30;
+        int yPos = startY + 28;
+        float scale = 0.85f; // Scale factor for items and text
 
         // Render visible item based on scroll offset
         for (int i = 0; i < VISIBLE_ITEMS; i++) {
@@ -83,13 +84,17 @@ public class SkillUnlocksScreen extends Screen {
 
             RequirementUtils.UnlockInfo unlock = unlocks.get(idx);
             
+            graphics.pose().pushMatrix();
+            graphics.pose().translate((float)(startX + 8), (float)yPos, graphics.pose());
+            graphics.pose().scale(scale, scale, graphics.pose());
+
             // Logic to render actual Spell PNGs if this is the Magic skill
             boolean renderedCustom = false;
             if (this.skill == Skill.MAGIC) {
                 for (Spell spell : Spell.values()) {
                     if (unlock.description().equals(spell.getDisplayName())) {
                         graphics.blit(RenderPipelines.GUI_TEXTURED, spell.getIconTexture(), 
-                                startX + 5, yPos, 0.0f, 0.0f, 16, 16, 32, 32, 32, 32, -1);
+                                0, 0, 0.0f, 0.0f, 16, 16, 32, 32, 32, 32, -1);
                         renderedCustom = true;
                         break;
                     }
@@ -97,21 +102,22 @@ public class SkillUnlocksScreen extends Screen {
             }
 
             if (!renderedCustom) {
-                graphics.item(unlock.icon(), startX + 5, yPos);
+                graphics.item(unlock.icon(), 0, 0);
             }
 
             String lvlStr = String.format("Lvl %02d:", unlock.level());
-            
-            graphics.text(this.font, lvlStr, startX + 25, yPos + 4, 0xFFFFFFFF);
-            graphics.text(this.font, unlock.description(), startX + 62, yPos + 4, 0xFFBBBBBB);
-            yPos += 22;
+            graphics.text(this.font, lvlStr, 22, 4, 0xFFFFFFFF);
+            graphics.text(this.font, unlock.description(), 58, 4, 0xFFBBBBBB);
+
+            graphics.pose().popMatrix();
+            yPos += 16; // Tighter vertical spacing
         }
 
         // Simple Scrollbar Track
         if (unlocks.size() > VISIBLE_ITEMS) {
             int barX = startX + WIDTH - 6;
-            int barY = startY + 30;
-            int barHeight = VISIBLE_ITEMS * 22;
+            int barY = startY + 28;
+            int barHeight = VISIBLE_ITEMS * 16;
             graphics.fill(barX, barY, barX + 2, barY + barHeight, 0xFF333333);
             float progress = (float) scrollOffset / (unlocks.size() - VISIBLE_ITEMS);
             int thumbY = barY + (int)(progress * (barHeight - 10));

@@ -78,6 +78,14 @@ public class ModAttachments {
                     .copyOnDeath()
                     .build());
 
+    public static final Supplier<AttachmentType<String>> ACTIVE_ECHO_ID = ATTACHMENT_TYPES.register(
+            "active_echo_id",
+            () -> AttachmentType.builder(() -> "")
+                    .serialize(Codec.STRING.fieldOf("id"))
+                    .sync(ByteBufCodecs.STRING_UTF8)
+                    .copyOnDeath()
+                    .build());
+
     public static final Supplier<AttachmentType<Vec3>> LAST_POS = ATTACHMENT_TYPES.register(
             "last_pos",
             () -> AttachmentType.builder(() -> Vec3.ZERO)

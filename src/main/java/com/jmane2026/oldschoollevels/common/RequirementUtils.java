@@ -152,17 +152,28 @@ public class RequirementUtils {
         return 1;
     }
 
+    public static float getDefenseArmorBonus(int level) {
+        return (level - 1) * 0.21f; // ~20.5 Armor points at Level 99
+    }
+
+    public static float getDefenseToughnessBonus(int level) {
+        return (level - 1) * 0.125f; // ~12.2 Toughness points at Level 99 (Netherite Tier)
+    }
+
     public static float getMovementSpeedBonus(int level) {
+        if (!OSLConfig.ENABLE_MOVEMENT_SPEED_SCALING.get()) return 0.0f;
         return (level - 1) * 0.01f; // 1% faster per level
     }
 
     public static float getSwimSpeedBonus(int level) {
+        if (!OSLConfig.ENABLE_SWIM_SPEED_SCALING.get()) return 0.0f;
         if (level < 45) return 0.0f;
         // Scaled to fit 0.0 - 1.0 range of WATER_MOVEMENT_EFFICIENCY
         return Math.min(1.0f, (level - 45) * 0.02f); // 2% efficiency per level above 45
     }
 
     public static float getJumpBoost(int level) {
+        if (!OSLConfig.ENABLE_JUMP_SCALING.get()) return 0.0f;
         if (level < 20) return 0.0f;
         return (level - 1) * 0.015f; // ~1.5% higher per level
     }
@@ -239,7 +250,6 @@ public class RequirementUtils {
         if (path.contains("golden")) return 3.2f;
         if (path.contains("iron")) return 2.4f;
         if (path.contains("copper")) return 2.2f;
-        if (path.contains("flint")) return 2.0f;
         return 2.0f;
     }
 

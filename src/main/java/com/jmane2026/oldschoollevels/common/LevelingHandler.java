@@ -65,6 +65,18 @@ public class LevelingHandler {
         }
     }
 
+    @SubscribeEvent
+    public static void onPlayerClone(PlayerEvent.Clone event) {
+        if (event.getEntity() instanceof ServerPlayer newPlayer) {
+            // Re-sync all critical data to the new player entity
+            newPlayer.syncData(ModAttachments.SKILLS.get());
+            newPlayer.syncData(ModAttachments.STAMINA.get());
+            newPlayer.syncData(ModAttachments.ACTIVE_SPELL.get());
+            
+            SkillAttributeHandler.refreshAttributes(newPlayer);
+        }
+    }
+
     private static final float BASE_CRIT_CHANCE = 0.05f; // 5% chance
 
     @SubscribeEvent
@@ -87,12 +99,12 @@ public class LevelingHandler {
                 String arrowPath = !arrowStack.isEmpty() ? BuiltInRegistries.ITEM.getKey(arrowStack.getItem()).getPath() : "";
                 amount += Math.max(0, RequirementUtils.getArrowDamage(arrowPath) - 1.0f);
                 amount += RequirementUtils.getBowDamageBonus(BuiltInRegistries.ITEM.getKey(player.getMainHandItem().getItem()).getPath());
-                amount *= (1.0f + (rangedLvl / 100.0f));
+                amount *= (1.0f + ((rangedLvl - 1) / 100.0f));
             }
             // 3. Magic Scaling Logic
             else if (event.getSource().getDirectEntity() instanceof AirBlastProjectile) {
                 int magicLvl = ExperienceUtils.getLevelAtExperience(player.getData(ModAttachments.SKILLS.get()).getExperience(Skill.MAGIC));
-                amount *= (1.0f + (magicLvl / 100.0f));
+                amount *= (1.0f + ((magicLvl - 1) / 100.0f));
             }
             // 4. Melee Scaling Logic (Anything that isn't a projectile)
             else {
@@ -101,7 +113,7 @@ public class LevelingHandler {
                 int strengthLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.STRENGTH));
                 
                 // Scaling: 1% bonus damage per level (multiplied by style scale)
-                amount *= (1.0f + ((strengthLvl / 100.0f) * style.getStrengthScale()));
+                amount *= (1.0f + (((strengthLvl - 1) / 100.0f) * style.getStrengthScale()));
             }
             event.setAmount(amount);
         }
@@ -176,7 +188,7 @@ public class LevelingHandler {
         // --- Wall Jump Logic ---
         // Trigger if: in air, touching a wall, and pressing jump
         // We also check if vertical movement has stabilized or started falling to ensure we're "in the air" properly
-        if (level >= 60 && !player.onGround() && player.getLastClientInput().jump() && player.horizontalCollision && !player.getAbilities().flying && player.getDeltaMovement().y < 0.35) {
+        if (OSLConfig.ENABLE_WALL_JUMPING.get() && level >= 60 && !player.onGround() && player.getLastClientInput().jump() && player.horizontalCollision && !player.getAbilities().flying && player.getDeltaMovement().y < 0.35) {
             long currentTime = player.level().getGameTime();
             if (currentTime > WALL_JUMP_COOLDOWNS.getOrDefault(player.getUUID(), 0L)) {
                 if (currentStamina >= 10.0f) {
@@ -228,7 +240,7 @@ public class LevelingHandler {
         boolean isNearWaterSurface = player.level().getFluidState(player.blockPosition()).is(FluidTags.WATER) || 
                                     player.level().getFluidState(player.blockPosition().below()).is(FluidTags.WATER);
 
-        if (level >= 80 && WATER_SKIP_ELIGIBILITY.contains(player.getUUID()) && isNearWaterSurface && !player.isEyeInFluid(FluidTags.WATER) && player.getLastClientInput().jump() && !player.getAbilities().flying) {
+        if (OSLConfig.ENABLE_WATER_STRIDING.get() && level >= 80 && WATER_SKIP_ELIGIBILITY.contains(player.getUUID()) && isNearWaterSurface && !player.isEyeInFluid(FluidTags.WATER) && player.getLastClientInput().jump() && !player.getAbilities().flying) {
             long currentTime = player.level().getGameTime();
             if (currentTime > WATER_JUMP_COOLDOWNS.getOrDefault(player.getUUID(), 0L)) {
                 // Water jumping is strenuous; it costs 12.0 stamina
@@ -339,7 +351,7 @@ public class LevelingHandler {
         float newSpeed = originalSpeed;
 
         // Mining Speed Scaling
-        if (state.is(BlockTags.MINEABLE_WITH_PICKAXE)) {
+        if (OSLConfig.ENABLE_MINING_SPEED_SCALING.get() && state.is(BlockTags.MINEABLE_WITH_PICKAXE)) {
             int level = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MINING));
             int reqLevel = RequirementUtils.getRequiredMiningLevel(block);
             
@@ -352,7 +364,7 @@ public class LevelingHandler {
         }
 
         // Woodcutting Speed Scaling
-        if (state.is(BlockTags.LOGS)) {
+        if (OSLConfig.ENABLE_WOODCUTTING_SPEED_SCALING.get() && state.is(BlockTags.LOGS)) {
             int level = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.WOODCUTTING));
             int reqLevel = RequirementUtils.getRequiredWoodcuttingLevel(block);
             

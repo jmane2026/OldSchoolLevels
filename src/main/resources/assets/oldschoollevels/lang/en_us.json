@@ -45,5 +45,15 @@
   "item.oldschoollevels.fire_echo": "Fire Echo",
   "item.oldschoollevels.logic_echo": "Logic Echo",
 
-  "item.oldschoollevels.sigil_pouch": "Sigil Pouch"
+  "item.oldschoollevels.sigil_pouch": "Sigil Pouch",
+
+  "oldschoollevels.config.title": "Old School Levels Configuration",
+  "oldschoollevels.config.enableEntityHealthBars": "Enable Entity Health Bars",
+  "oldschoollevels.config.enableJumpScaling": "Enable Jump Scaling",
+  "oldschoollevels.config.enableWallJumping": "Enable Wall Jumping",
+  "oldschoollevels.config.enableWaterStriding": "Enable Water Striding",
+  "oldschoollevels.config.enableMovementSpeedScaling": "Enable Movement Speed Scaling",
+  "oldschoollevels.config.enableSwimSpeedScaling": "Enable Swim Speed Scaling",
+  "oldschoollevels.config.enableMiningSpeedScaling": "Enable Mining Speed Scaling",
+  "oldschoollevels.config.enableWoodcuttingSpeedScaling": "Enable Woodcutting Speed Scaling"
 }

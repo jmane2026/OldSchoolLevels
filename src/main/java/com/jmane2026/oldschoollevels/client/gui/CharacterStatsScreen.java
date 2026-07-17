@@ -97,24 +97,28 @@ public class CharacterStatsScreen extends Screen {
         // Title
         graphics.text(this.font, this.title, centerX - (this.font.width(this.title) / 2), startY + 8, 0xFFFFAA00);
 
-        // Combat Section
-        int combatY = startY + 122;
+        // Combat Section - Shrunk text and spacing
+        int combatY = startY + 120;
         graphics.text(this.font, "Combat Bonuses:", startX + 10, combatY, 0xFFBBBBBB);
-        renderStat(graphics, "Strength:", getStrBonus(data, currentStyle), startX + 15, combatY + 12);
-        renderStat(graphics, "Swing Speed:", getAtkBonus(data, currentStyle), startX + 15, combatY + 22);
-        renderStat(graphics, "Armor:", getDefBonus(data, currentStyle), startX + 15, combatY + 32);
-        renderStat(graphics, "Health:", getLifeBonus(data), startX + 15, combatY + 42);
-        renderStat(graphics, "Ranged Dmg:", getRangedBonus(data), startX + 15, combatY + 52);
-        renderStat(graphics, "Magic Bonus:", getMagicBonus(data), startX + 15, combatY + 62);
         
-        int mobilityY = combatY + 72;
+        int statY = combatY + 11;
+        int lineGap = 8; // Even tighter gap to prevent spillage
+
+        renderStat(graphics, "Strength:", getStrBonus(data, currentStyle), startX + 15, statY);
+        renderStat(graphics, "Swing Speed:", getAtkBonus(data, currentStyle), startX + 15, statY += lineGap);
+        renderStat(graphics, "Defense:", getDefBonus(data, currentStyle), startX + 15, statY += lineGap);
+        renderStat(graphics, "Health:", getLifeBonus(data), startX + 15, statY += lineGap);
+        renderStat(graphics, "Ranged Dmg:", getRangedBonus(data), startX + 15, statY += lineGap);
+        renderStat(graphics, "Magic Bonus:", getMagicBonus(data), startX + 15, statY += lineGap);
+
+        int mobilityY = statY + 11;
         int mobLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MOBILITY));
         renderStat(graphics, "Move Speed:", String.format("+%.1f%%", (mobLvl - 1) * 1.5f), startX + 15, mobilityY);
-        renderStat(graphics, "Swim Speed:", String.format("+%d%%", (int)(RequirementUtils.getSwimSpeedBonus(mobLvl) * 100)), startX + 15, mobilityY + 10);
-        renderStat(graphics, "Max Stamina:", String.format("%.0f", RequirementUtils.getMaxStamina(mobLvl)), startX + 15, mobilityY + 20);
+        renderStat(graphics, "Swim:", String.format("+%d%%", (int)(RequirementUtils.getSwimSpeedBonus(mobLvl) * 100)), startX + 15, mobilityY + lineGap);
+        renderStat(graphics, "Stamina:", String.format("%.0f", RequirementUtils.getMaxStamina(mobLvl)), startX + 15, mobilityY + (lineGap * 2));
 
         // Gathering Section
-        int gatherY = mobilityY + 32;
+        int gatherY = mobilityY + (lineGap * 3) + 1;
         graphics.text(this.font, "Gathering Bonuses:", startX + 10, gatherY, 0xFFBBBBBB);
 
         int miningLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MINING));
@@ -125,13 +129,20 @@ public class CharacterStatsScreen extends Screen {
     }
 
     private void renderStat(GuiGraphicsExtractor graphics, String label, String value, int x, int y) {
-        graphics.text(this.font, label, x, y, 0xFFAAAAAA);
-        graphics.text(this.font, value, x + 100, y, 0xFFFFFF00);
+        graphics.pose().pushMatrix();
+        graphics.pose().translate((float)x, (float)y, graphics.pose());
+        graphics.pose().scale(0.85f, 0.85f, graphics.pose());
+
+        // Draw at origin 0,0 relative to the translation
+        graphics.text(this.font, label, 0, 0, 0xFFAAAAAA);
+        graphics.text(this.font, value, 100, 0, 0xFFFFFF00);
+
+        graphics.pose().popMatrix();
     }
 
     private String getStrBonus(SkillData data, CombatStyle style) {
         int lvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.STRENGTH));
-        double bonus = (lvl * style.getStrengthScale());
+        double bonus = ((lvl - 1) * style.getStrengthScale());
         return String.format("+%.1f%%", bonus);
     }
 
@@ -143,8 +154,9 @@ public class CharacterStatsScreen extends Screen {
 
     private String getDefBonus(SkillData data, CombatStyle style) {
         int lvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.DEFENSE));
-        double bonus = (lvl - 1) * 0.2 * style.getDefenseScale();
-        return String.format("+%.1f", bonus);
+        double armor = RequirementUtils.getDefenseArmorBonus(lvl) * style.getDefenseScale();
+        double toughness = RequirementUtils.getDefenseToughnessBonus(lvl) * style.getDefenseScale();
+        return String.format("+%.1f / %.1f", armor, toughness);
     }
 
     private String getLifeBonus(SkillData data) {
@@ -154,13 +166,13 @@ public class CharacterStatsScreen extends Screen {
 
     private String getRangedBonus(SkillData data) {
         int lvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.RANGED));
-        return String.format("+%d%%", lvl);
+        return String.format("+%d%%", lvl - 1);
     }
 
     private String getMagicBonus(SkillData data) {
         int lvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MAGIC));
         // 1% per level logic: Level 6 = +6%
-        return String.format("+%d%%", lvl);
+        return String.format("+%d%%", lvl - 1);
     }
 
     @Override

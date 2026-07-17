@@ -1,5 +1,6 @@
 package com.jmane2026.oldschoollevels.client.gui;
 
+import com.jmane2026.oldschoollevels.common.OSLConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
@@ -22,6 +23,8 @@ public class TargetHealthOverlay {
 
     public static void render(GuiGraphicsExtractor graphics, float partialTick) {
         Minecraft mc = Minecraft.getInstance();
+        if (!OSLConfig.ENABLE_ENTITY_HEALTH_BARS.get()) return;
+
         if (mc.options.hideGui || mc.player == null || mc.level == null) return;
 
         // 1. Perform a long-range Raycast to find a target (20 blocks)
@@ -86,7 +89,8 @@ public class TargetHealthOverlay {
             graphics.centeredText(mc.font, Component.literal(lastTargetName), screenWidth / 2, y - 10, applyAlpha(0xFFFFFFFF, alpha));
 
             // Numeric Health
-            String healthText = (int)lastHealth + " / " + (int)lastMaxHealth;
+            // Use ceiling so that 0.1 HP shows as 1 HP (prevents 0/3 while still alive)
+            String healthText = (int)Math.ceil(lastHealth) + " / " + (int)Math.ceil(lastMaxHealth);
             graphics.centeredText(mc.font, Component.literal(healthText), screenWidth / 2, y + 1, applyAlpha(0xFFFFFFFF, alpha));
         }
     }

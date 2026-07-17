@@ -3,8 +3,10 @@ package com.jmane2026.oldschoollevels.common;
 import com.jmane2026.oldschoollevels.OldSchoolLevels;
 import com.jmane2026.oldschoollevels.core.ModAttachments;
 import com.jmane2026.oldschoollevels.util.ExperienceUtils;
+import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -18,6 +20,7 @@ public class SkillAttributeHandler {
     private static final Identifier STRENGTH_ID = Identifier.fromNamespaceAndPath(OldSchoolLevels.MODID, "skill_strength_bonus");
     private static final Identifier ATTACK_ID = Identifier.fromNamespaceAndPath(OldSchoolLevels.MODID, "skill_attack_bonus");
     private static final Identifier DEFENSE_ID = Identifier.fromNamespaceAndPath(OldSchoolLevels.MODID, "skill_defense_bonus");
+    private static final Identifier TOUGHNESS_ID = Identifier.fromNamespaceAndPath(OldSchoolLevels.MODID, "skill_toughness_bonus");
 
     public static void refreshAttributes(ServerPlayer player) {
         SkillData data = player.getData(ModAttachments.SKILLS);
@@ -37,19 +40,24 @@ public class SkillAttributeHandler {
         double strBonus = baseStrBonus * style.getStrengthScale();
 
         // Attack Scaling: +0.05 Attack Speed per level (Reduces swing cooldown)
+        // We consolidate this here and use ADD_MULTIPLIED_BASE for a better feel
         int atkLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.ATTACK));
         double baseAtkSpeedBonus = (atkLvl - 1) * 0.05;
         double atkSpeedBonus = baseAtkSpeedBonus * style.getAttackSpeedScale();
 
-        // Defense Scaling: +0.2 Armor per level (Innate damage reduction)
+        // Defense Scaling: Use RequirementUtils for consistent Armor and Toughness
         int defLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.DEFENSE));
-        double baseDefBonus = (defLvl - 1) * 0.2;
-        double defBonus = baseDefBonus * style.getDefenseScale();
+        double defBonus = RequirementUtils.getDefenseArmorBonus(defLvl) * style.getDefenseScale();
+        double toughnessBonus = RequirementUtils.getDefenseToughnessBonus(defLvl) * style.getDefenseScale();
 
         applyModifier(player, Attributes.MAX_HEALTH, LIFE_ID, hpBonus);
         applyModifier(player, Attributes.ATTACK_DAMAGE, STRENGTH_ID, strBonus);
-        applyModifier(player, Attributes.ATTACK_SPEED, ATTACK_ID, atkSpeedBonus);
+        
+        // Apply Attack Speed using Multiplied Base to ensure it scales with the weapon type
+        applyModifier(player, Attributes.ATTACK_SPEED, ATTACK_ID, atkSpeedBonus, AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
+        
         applyModifier(player, Attributes.ARMOR, DEFENSE_ID, defBonus);
+        applyModifier(player, Attributes.ARMOR_TOUGHNESS, TOUGHNESS_ID, toughnessBonus);
 
         // After applying modifiers, check if max health increased (common on login or level up)
         double newMaxHealth = player.getMaxHealth();
@@ -81,23 +89,18 @@ public class SkillAttributeHandler {
             double bonus = RequirementUtils.getSwimSpeedBonus(level);
             swimSpeed.addTransientModifier(new AttributeModifier(Identifier.fromNamespaceAndPath(OldSchoolLevels.MODID, "mobility_swim_efficiency"), bonus, AttributeModifier.Operation.ADD_VALUE));
         }
-
-        AttributeInstance attackSpeed = player.getAttribute(Attributes.ATTACK_SPEED);
-        if (attackSpeed != null) {
-            attackSpeed.removeModifier(Identifier.fromNamespaceAndPath(OldSchoolLevels.MODID, "attack_speed_bonus"));
-            int level = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.ATTACK));
-            // Match the CharacterStatsScreen logic: (lvl - 1) * 0.05 * style scale
-            double bonus = (level - 1) * 0.05 * style.getAttackSpeedScale();
-            attackSpeed.addTransientModifier(new AttributeModifier(Identifier.fromNamespaceAndPath(OldSchoolLevels.MODID, "attack_speed_bonus"), bonus, AttributeModifier.Operation.ADD_VALUE));
-        }
     }
 
-    private static void applyModifier(ServerPlayer player, net.minecraft.core.Holder<net.minecraft.world.entity.ai.attributes.Attribute> attribute, Identifier id, double amount) {
+    private static void applyModifier(ServerPlayer player, Holder<Attribute> attribute, Identifier id, double amount) {
+        applyModifier(player, attribute, id, amount, AttributeModifier.Operation.ADD_VALUE);
+    }
+
+    private static void applyModifier(ServerPlayer player, Holder<Attribute> attribute, Identifier id, double amount, AttributeModifier.Operation op) {
         AttributeInstance instance = player.getAttribute(attribute);
         if (instance != null) {
             instance.removeModifier(id);
             if (amount > 0) {
-                instance.addTransientModifier(new AttributeModifier(id, amount, AttributeModifier.Operation.ADD_VALUE));
+                instance.addTransientModifier(new AttributeModifier(id, amount, op));
             }
         }
     }

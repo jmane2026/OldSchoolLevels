@@ -2,6 +2,7 @@ package com.jmane2026.oldschoollevels.common.entities;
 
 import com.jmane2026.oldschoollevels.OldSchoolLevels;
 import net.minecraft.server.level.ServerBossEvent;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.BossEvent;
 import net.minecraft.world.entity.EntityType;
@@ -24,23 +25,19 @@ public class GiantBossHandler {
 
     // This method MUST be called from the Mod Bus (see OldSchoolLevels.java)
     public static void onAttributeModification(EntityAttributeModificationEvent event) {
-        System.out.println("[OSL Debug] STARTING Giant Attribute Modification...");
         try {
             event.add(EntityType.GIANT, Attributes.MAX_HEALTH, 300.0);
             event.add(EntityType.GIANT, Attributes.ATTACK_DAMAGE, 12.0); // Reduced from 20
             event.add(EntityType.GIANT, Attributes.MOVEMENT_SPEED, 0.28); // Slightly slower
             event.add(EntityType.GIANT, Attributes.FOLLOW_RANGE, 40.0);
-            System.out.println("[OSL Debug] Giant Attributes Upgraded SUCCESSFULLY.");
-        } catch (Exception e) {
-            System.out.println("[OSL Debug] FAILED to modify Giant attributes: " + e.getMessage());
+        } catch (Exception _) {
+
         }
     }
 
     @SubscribeEvent
     public static void onGiantJoin(EntityJoinLevelEvent event) {
         if (event.getEntity() instanceof Giant giant && !event.getLevel().isClientSide()) {
-            System.out.println("[OSL Debug] Giant joined level at " + giant.blockPosition() + " with HP: " + giant.getHealth());
-
             ServerBossEvent bossBar = new ServerBossEvent(
                     UUID.randomUUID(),
                     giant.getDisplayName(),
@@ -54,11 +51,6 @@ public class GiantBossHandler {
     @SubscribeEvent
     public static void onGiantTick(EntityTickEvent.Pre event) {
         if (event.getEntity() instanceof Giant giant && !giant.level().isClientSide()) {
-            // Log every 5 seconds to confirm the Giant is still alive and ticking
-            if (giant.tickCount % 100 == 0) {
-                System.out.println("[OSL Debug] Giant " + giant.getId() + " is ticking. HP: " + giant.getHealth());
-            }
-
             ServerBossEvent bossBar = BOSS_BARS.get(giant.getUUID());
             if (bossBar != null) {
                 bossBar.setProgress(giant.getHealth() / giant.getMaxHealth());
@@ -77,6 +69,13 @@ public class GiantBossHandler {
             }
             if (giant.getTarget() != null) {
                 giant.getNavigation().moveTo(giant.getTarget(), 1.2);
+
+                // Manual Attack Trigger: Giants have no attack goals, so we force the logic
+                double attackReach = (giant.getBbWidth() * 2.0F * giant.getBbWidth() * 2.0F + giant.getTarget().getBbWidth());
+                if (giant.distanceToSqr(giant.getTarget()) <= attackReach * attackReach && giant.tickCount % 20 == 0) {
+                    giant.doHurtTarget((ServerLevel) giant.level(), giant.getTarget());
+                    giant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+                }
             }
         }
     }
@@ -86,7 +85,6 @@ public class GiantBossHandler {
         if (event.getEntity() instanceof Giant giant && !giant.isAlive()) {
             ServerBossEvent bar = BOSS_BARS.remove(giant.getUUID());
             if (bar != null) {
-                System.out.println("[OSL Debug] Giant died/removed. Cleaning up Boss Bar.");
                 bar.removeAllPlayers();
             }
         }

@@ -32,11 +32,10 @@ public class EchoItem extends Item {
             boolean isSelected = (slot == EquipmentSlot.MAINHAND || slot == EquipmentSlot.OFFHAND);
 
             if (isSelected) {
-                // Only search for structures every 100 ticks (5 seconds) for performance
-                // Added: Only search if the player doesn't already have a target locked
-                BlockPos currentTarget = player.getData(ModAttachments.ECHO_TARGET.get());
-
-                if (currentTarget.equals(BlockPos.ZERO) && player.tickCount % 100 == 0) {
+                String activeId = player.getData(ModAttachments.ACTIVE_ECHO_ID.get());
+                
+                // Trigger update ONLY if the structure type changed (selected a different Echo type)
+                if (!activeId.equals(this.structureId)) {
                     TagKey<Structure> tag = TagKey.create(Registries.STRUCTURE,
                             Identifier.fromNamespaceAndPath("oldschoollevels", structureId + "s"));
 
@@ -44,6 +43,7 @@ public class EchoItem extends Item {
 
                     if (nearest != null) {
                         setTargetCenter(player, level, tag, nearest);
+                        player.setData(ModAttachments.ACTIVE_ECHO_ID.get(), this.structureId);
                         // Manually sync the attachment so the Client HUD can see the new target
                         player.syncData(ModAttachments.ECHO_TARGET.get());
                     }
@@ -53,16 +53,16 @@ public class EchoItem extends Item {
     }
 
     public void updateAndSync(ServerPlayer player, ServerLevel level) {
-        // Only perform the instant sync if they don't already have a target
-        // This prevents the target from jumping the moment they pull the item out
-        // if the server already had a valid position stored.
         BlockPos currentTarget = player.getData(ModAttachments.ECHO_TARGET.get());
-        if (currentTarget.equals(BlockPos.ZERO)) {
+        String activeId = player.getData(ModAttachments.ACTIVE_ECHO_ID.get());
+
+        if (!activeId.equals(this.structureId) || currentTarget.equals(BlockPos.ZERO)) {
             TagKey<Structure> tag = TagKey.create(Registries.STRUCTURE,
                     Identifier.fromNamespaceAndPath("oldschoollevels", structureId + "s"));
 
             BlockPos nearest = level.findNearestMapStructure(tag, player.blockPosition(), 1000, false);
             setTargetCenter(player, level, tag, nearest);
+            player.setData(ModAttachments.ACTIVE_ECHO_ID.get(), this.structureId);
             player.syncData(ModAttachments.ECHO_TARGET.get());
         }
     }
