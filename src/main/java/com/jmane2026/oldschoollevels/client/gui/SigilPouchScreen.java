@@ -30,7 +30,7 @@ public class SigilPouchScreen extends AbstractContainerScreen<SigilPouchMenu> {
 
     @Override
     protected void extractLabels(@NonNull GuiGraphicsExtractor graphics, int xm, int ym) {
-
+        // Leaving this empty to override the base container title drawing behavior
     }
 
     @Override
@@ -38,39 +38,59 @@ public class SigilPouchScreen extends AbstractContainerScreen<SigilPouchMenu> {
         int x = this.leftPos;
         int y = this.topPos;
 
-        // 1. Render ONLY the bottom part of the inventory starting at V=79 to hide the boot slot
+        // 1. Render ONLY the bottom part of the inventory starting at V=79 to hide the armor slots
         graphics.blit(RenderPipelines.GUI_TEXTURED, INVENTORY_TEXTURE, x, y + 79, 0.0f, 79.0f, 176, 87, 256, 256);
 
-        // 3. Render OSRS Pouch Panel. It starts slightly higher than the crop (y + 72) to fit the title
+        // 2. Setup OSRS Pouch Panel Dimensions
         int pouchX = x - POUCH_WIDTH - 2;
         int pouchY = y + 79; // Aligned flush with the inventory background crop
-        graphics.fill(pouchX, pouchY, pouchX + POUCH_WIDTH, pouchY + POUCH_HEIGHT, 0xEE111115);
-        graphics.outline(pouchX, pouchY, POUCH_WIDTH, POUCH_HEIGHT, 0xFFFFFFFF);
-        // Title rendered just above the box to prevent icon overlap
-        graphics.centeredText(this.font, "Sigil Pouch", pouchX + POUCH_WIDTH / 2, pouchY - 10, 0xFFFFAA00);
 
-        // 4. Render Sigil counts inside the pouch panel
+        // 3. Fill the pouch panel with vanilla gray background matching the inventory texture
+        graphics.fill(pouchX, pouchY, pouchX + POUCH_WIDTH, pouchY + POUCH_HEIGHT, 0xFFC6C6C6);
+
+        // 4. Draw the white highlight lines (Top and Left borders)
+        graphics.fill(pouchX, pouchY, pouchX + POUCH_WIDTH, pouchY + 1, 0xFFFFFFFF); // Top edge
+        graphics.fill(pouchX, pouchY, pouchX + 1, pouchY + POUCH_HEIGHT, 0xFFFFFFFF); // Left edge
+
+        // 5. Draw the dark gray shadow lines (Bottom and Right borders)
+        graphics.fill(pouchX, pouchY + POUCH_HEIGHT - 1, pouchX + POUCH_WIDTH, pouchY + POUCH_HEIGHT, 0xFF555555); // Bottom edge
+        graphics.fill(pouchX + POUCH_WIDTH - 1, pouchY, pouchX + POUCH_WIDTH, pouchY + POUCH_HEIGHT, 0xFF555555); // Right edge
+
+        // Title - Converted to clean charcoal color with no blurry drop-shadow
+        int titleWidth = this.font.width("Sigil Pouch");
+        graphics.text(this.font, "Sigil Pouch", pouchX + (POUCH_WIDTH / 2) - (titleWidth / 2), pouchY - 10, 0xFF404040, false);
+
+        // 6. Render Sigil counts inside the pouch panel
         int startX = pouchX + 5;
-        // startY lands at y + 84 (79 + 5) to align exactly with the first row of inventory slots
-        int startY = pouchY + 5; 
-        
+        int startY = pouchY + 5;
+
         int sigilCount = this.menu.getSigilTypes().size();
         for (int i = 0; i < sigilCount; i++) {
             int slotX = startX + (i % 3 * 26);
             int slotY = startY + (i / 3 * 26);
 
+            // Draw a subtle sunken item slot background for each sigil slot to mimic standard inventory panels
+            graphics.fill(slotX - 1, slotY - 1, slotX + 17, slotY + 17, 0xFF8B8B8B);
+            graphics.outline(slotX - 1, slotY - 1, 18, 18, 0xFF373737);
+
             Item sigil = this.menu.getSigilTypes().get(i);
             int count = SigilPouchItem.getSigilCount(this.menu.getPouch(), sigil);
 
+            // Create item stack state reference
+            ItemStack stack = new ItemStack(sigil);
+
             // Render Icon (Directly at slot coordinates for perfect alignment)
-            graphics.fakeItem(new ItemStack(sigil), slotX, slotY);
-            
-            String countStr = count > 99 ? "*" : String.valueOf(count);
-            // Outline logic for readability
-            int textX = slotX + 16 - font.width(countStr);
-            int textY = slotY + 8;
-            graphics.text(this.font, countStr, textX + 1, textY, 0xFF000000);
-            graphics.text(this.font, countStr, textX, textY, 0xFFFFFFFF);
+            graphics.fakeItem(stack, slotX, slotY);
+
+            // Render text stack value numbers natively with standard built-in text styling
+            if (count > 0) {
+                String countStr = count > 999 ? "999+" : String.valueOf(count);
+                int textX = slotX + 17 - font.width(countStr);
+                int textY = slotY + 9;
+
+                // Draw the clean item text overlay (White text with a true dark drop shadow)
+                graphics.text(this.font, countStr, textX, textY, 0xFFFFFFFF, true);
+            }
         }
     }
 }

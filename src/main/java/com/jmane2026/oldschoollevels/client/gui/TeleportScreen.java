@@ -13,6 +13,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
+import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 
@@ -103,7 +104,6 @@ public class TeleportScreen extends Screen {
         if (super.mouseClicked(event, doubleClicked)) return true;
 
         if (event.button() == 0 && !isAdding) {
-
             int x = (this.width - WIDTH) / 2;
             int y = (this.height - HEIGHT) / 2;
             int listX = x + 10;
@@ -113,7 +113,6 @@ public class TeleportScreen extends Screen {
             if (mouseX >= listX && mouseX <= listX + 130) {
                 assert Minecraft.getInstance().player != null;
                 List<TeleportLocation> locations = Minecraft.getInstance().player.getData(ModAttachments.TELEPORT_LOCATIONS.get());
-                // Each entry is roughly 22 pixels high based on the loop logic
                 int clickedIdx = (int) ((mouseY - listY) / 22);
 
                 if (clickedIdx >= 0 && clickedIdx < locations.size()) {
@@ -139,9 +138,21 @@ public class TeleportScreen extends Screen {
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         int x = (this.width - WIDTH) / 2;
         int y = (this.height - HEIGHT) / 2;
-        graphics.fill(x, y, x + WIDTH, y + HEIGHT, 0xDD000000);
-        graphics.outline(x, y, WIDTH, HEIGHT, 0xFFFFFFFF);
-        graphics.centeredText(this.font, this.title, x + WIDTH / 2, y + 8, 0xFFFFAA00);
+
+        // 1. Fill the main inner panel background with vanilla gray
+        graphics.fill(x, y, x + WIDTH, y + HEIGHT, 0xFFC6C6C6);
+
+        // 2. Draw the white highlight lines (Top and Left borders)
+        graphics.fill(x, y, x + WIDTH, y + 1, 0xFFFFFFFF); // Top edge
+        graphics.fill(x, y, x + 1, y + HEIGHT, 0xFFFFFFFF); // Left edge
+
+        // 3. Draw the dark gray shadow lines (Bottom and Right borders)
+        graphics.fill(x, y + HEIGHT - 1, x + WIDTH, y + HEIGHT, 0xFF555555); // Bottom edge
+        graphics.fill(x + WIDTH - 1, y, x + WIDTH, y + HEIGHT, 0xFF555555); // Right edge
+
+        // Title - Converted to drawString with NO drop shadow and dark gray font
+        int titleWidth = this.font.width(this.title);
+        graphics.text(this.font, this.title, x + (WIDTH / 2) - (titleWidth / 2), y + 8, 0xFF404040, false);
 
         // --- Render List Manually (Not as buttons) ---
         if (!isAdding) {
@@ -149,26 +160,32 @@ public class TeleportScreen extends Screen {
             List<TeleportLocation> locations = Minecraft.getInstance().player.getData(ModAttachments.TELEPORT_LOCATIONS.get());
             int listY = y + 25;
             for (TeleportLocation loc : locations) {
-                int color = 0xFFFFFFFF;
+                int textColor = 0xFF404040; // Default text color changed to crisp dark gray
+
                 if (loc.equals(selectedLocation)) {
-                    color = 0xFFFFFF00; // Yellow text for selection
-                    // Subtle OSRS-style selection indicator
-                    graphics.text(this.font, ">", x + 4, listY, 0xFFFFFF00);
+                    textColor = 0xFF0000AA; // Active selection color changed to indigo blue for clean visibility
+                    // Selection indicator character - Drawn with shadow set to false
+                    graphics.text(this.font, ">", x + 4, listY, 0xFF0000AA, false);
                 }
 
-                graphics.text(this.font, loc.name(), x + 12, listY, color);
+                // Render location name with shadow set to false
+                graphics.text(this.font, loc.name(), x + 12, listY, textColor, false);
                 listY += 22;
                 if (listY > y + HEIGHT - 45) break;
             }
         }
 
-        // If adding, draw a darkened overlay behind the input box
+        // If adding, draw a clean recessed overlay area behind the input text boxes instead of pitch black
         if (isAdding) {
-            graphics.fill(x + 5, y + 55, x + WIDTH - 5, y + 110, 0xFF111111);
-            graphics.outline(x + 5, y + 55, WIDTH - 10, 55, 0xFF555555);
+            graphics.fill(x + 5, y + 55, x + WIDTH - 5, y + 110, 0xFF8B8B8B); // Dark slot gray
+            graphics.outline(x + 5, y + 55, WIDTH - 10, 55, 0xFF373737); // Dark inset outline border
         }
 
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+    }
+
+    @Override
+    public void extractBackground(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
     }
 
     @Override

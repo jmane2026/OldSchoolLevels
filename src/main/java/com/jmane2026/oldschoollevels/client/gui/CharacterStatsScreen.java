@@ -136,7 +136,7 @@ public class CharacterStatsScreen extends Screen {
     }
 
     @Override
-    public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
+    public void extractBackground(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
     }
 
     private void renderStat(GuiGraphicsExtractor graphics, String label, String value, int x, int y) {

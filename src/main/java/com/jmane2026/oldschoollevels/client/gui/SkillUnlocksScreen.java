@@ -93,7 +93,7 @@ public class SkillUnlocksScreen extends Screen {
 
     // MOUSE RELEASE INPUT: Safely stops scroll drag tracking when mouse is let go
     @Override
-    public boolean mouseReleased(MouseButtonEvent event) {
+    public boolean mouseReleased(@NonNull MouseButtonEvent event) {
         this.isDraggingScrollbar = false;
         return super.mouseReleased(event);
     }
@@ -101,7 +101,7 @@ public class SkillUnlocksScreen extends Screen {
     // MOUSE DRAGGED PASSTHROUGH: Handles dynamic active dragging tracking
 
     @Override
-    public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
+    public boolean mouseDragged(@NonNull MouseButtonEvent event, double dx, double dy) {
         if (this.isDraggingScrollbar) {
             updateScrollFromMouseY(dy);
             return true;
@@ -122,7 +122,7 @@ public class SkillUnlocksScreen extends Screen {
 
         // Normalize vertical movement percentage to a 0.0 - 1.0 spectrum scale
         double progress = (mouseY - barY - 6) / usableHeight;
-        progress = Math.max(0.0, Math.min(1.0, progress)); // Clamp range limits
+        progress = Math.clamp(progress, 0.0, 1.0); // Clamp range limits
 
         this.scrollOffset = (int) Math.round(progress * maxScroll);
     }
@@ -217,7 +217,7 @@ public class SkillUnlocksScreen extends Screen {
     }
 
     @Override
-    public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
+    public void extractBackground(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
     }
 
     @Override public boolean isPauseScreen() { return false; }

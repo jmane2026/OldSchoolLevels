@@ -256,6 +256,6 @@ public class SpellScreen extends Screen {
     public boolean isPauseScreen() { return false; }
 
     @Override
-    public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
+    public void extractBackground(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
     }
 }
