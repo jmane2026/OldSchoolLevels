@@ -7,10 +7,10 @@ import net.minecraft.network.codec.StreamCodec;
 import org.jspecify.annotations.NonNull;
 
 public enum CombatStyle {
-    ACCURATE("Accurate (Attack)", 0.5f, 0.5f, 1.0f),
-    AGGRESSIVE("Aggressive (Strength)", 1.0f, 0.25f, 0.25f),
-    DEFENSIVE("Defensive (Defense)", 0.25f, 1.0f, 0.5f),
-    CONTROLLED("Controlled (Shared)", 0.75f, 0.75f, 0.75f);
+    ACCURATE("Accurate", 0.5f, 0.5f, 1.0f),
+    AGGRESSIVE("Aggressive", 1.0f, 0.25f, 0.25f),
+    DEFENSIVE("Defensive", 0.25f, 1.0f, 0.5f),
+    CONTROLLED("Controlled", 0.75f, 0.75f, 0.75f);
 
     private final String description;
     private final float strengthScale;

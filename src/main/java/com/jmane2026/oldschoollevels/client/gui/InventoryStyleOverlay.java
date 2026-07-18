@@ -2,6 +2,11 @@ package com.jmane2026.oldschoollevels.client.gui;
 
 import com.jmane2026.oldschoollevels.OldSchoolLevels;
 import com.jmane2026.oldschoollevels.common.OSLConfig;
+import com.jmane2026.oldschoollevels.common.Skill;
+import com.jmane2026.oldschoollevels.common.CombatStyle;
+import com.jmane2026.oldschoollevels.core.ModAttachments;
+import com.jmane2026.oldschoollevels.network.ChangeStylePayload;
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.Window;
 import net.minecraft.client.Minecraft;
@@ -20,6 +25,10 @@ import org.lwjgl.glfw.GLFW;
 @EventBusSubscriber(modid = OldSchoolLevels.MODID, value = Dist.CLIENT)
 public class InventoryStyleOverlay {
 
+    public enum Panel { NONE, STATS, SKILLS, SPELLS, UNLOCKS }
+    public static Panel activePanel = Panel.NONE;
+    public static Skill selectedSkill = null; // Used for the Unlocks panel
+
     private enum DraggedButton { NONE, STATS, SKILLS, SPELLS }
     private static DraggedButton currentDragged = DraggedButton.NONE;
     private static double startMouseX, startMouseY;
@@ -28,36 +37,80 @@ public class InventoryStyleOverlay {
     @SubscribeEvent
     public static void onScreenInit(ScreenEvent.Init.Post event) {
         if (event.getScreen() instanceof InventoryScreen inv) {
-            Minecraft mc = Minecraft.getInstance();
-            int x = inv.getLeftPos() + 77;
-            int y = inv.getTopPos();
+            // Use the base (centered) X to ensure hitboxes stay stationary regardless of recipe book
+            int x = getBaseX(inv) + 77;
+            int y = inv.getTopPos(); // Y doesn't shift with the recipe book
 
             // Stats Button
             event.addListener(Button.builder(Component.empty(), (_) -> {
-                        if (!isShiftDown()) mc.setScreen(new CharacterStatsScreen());
-                    }).bounds(x + OSLConfig.STATS_BUTTON_X.get(), y + 43 + OSLConfig.STATS_BUTTON_Y.get(), 16, 16)
+                        if (!isShiftDown()) togglePanel(Panel.STATS);
+                    }).bounds(x + OSLConfig.STATS_BUTTON_X.get(), y + 41 + OSLConfig.STATS_BUTTON_Y.get(), 16, 16)
                     .tooltip(Tooltip.create(Component.literal("Character Sheet (Shift+Drag to Move)"))).build());
 
             // Skills Button
             event.addListener(Button.builder(Component.empty(), (_) -> {
-                        if (!isShiftDown()) mc.setScreen(new LevelScreen(Component.literal("Skills")));
-                    }).bounds(x + OSLConfig.SKILLS_BUTTON_X.get(), y + 25 + OSLConfig.SKILLS_BUTTON_Y.get(), 16, 16)
+                        if (!isShiftDown()) togglePanel(Panel.SKILLS);
+                    }).bounds(x + OSLConfig.SKILLS_BUTTON_X.get(), y + 23 + OSLConfig.SKILLS_BUTTON_Y.get(), 16, 16)
                     .tooltip(Tooltip.create(Component.literal("Skills (Shift+Drag to Move)"))).build());
 
             // Spells Button
             event.addListener(Button.builder(Component.empty(), (_) -> {
-                        if (!isShiftDown()) mc.setScreen(new SpellScreen(Component.literal("Spells")));
-                    }).bounds(x + OSLConfig.SPELLS_BUTTON_X.get(), y + 7 + OSLConfig.SPELLS_BUTTON_Y.get(), 16, 16)
+                        if (!isShiftDown()) togglePanel(Panel.SPELLS);
+                    }).bounds(x + OSLConfig.SPELLS_BUTTON_X.get(), y + 5 + OSLConfig.SPELLS_BUTTON_Y.get(), 16, 16)
                     .tooltip(Tooltip.create(Component.literal("Spellbook (Shift+Drag to Move)"))).build());
+
+            // Combat Style Buttons (Only when Stats panel is active)
+            if (activePanel == Panel.STATS) {
+                Minecraft mc = Minecraft.getInstance();
+                int styleX = inv.getLeftPos() + 180 + 5;
+                int styleY = inv.getTopPos() + 25;
+                for (CombatStyle style : CombatStyle.values()) {
+                    final CombatStyle s = style;
+                    event.addListener(Button.builder(Component.empty(), (_) -> {
+                                assert mc.player != null;
+                                mc.player.setData(ModAttachments.COMBAT_STYLE.get(), s);
+                        ClientPacketDistributor.sendToServer(new ChangeStylePayload(s));
+                        inv.init(inv.width, inv.height); // Refresh to update highlights
+                    }).bounds(styleX, styleY, 32, 11)
+                      .tooltip(Tooltip.create(CharacterStatsScreen.getStyleTooltip(s)))
+                      .build());
+                    styleX += 33;
+                }
+            }
+        }
+    }
+
+    private static void togglePanel(Panel panel) {
+        activePanel = (activePanel == panel) ? Panel.NONE : panel;
+        // Reset scroll position whenever switching panels
+        SkillUnlocksScreen.resetScroll();
+        // Re-init screen to add/remove the panel-specific buttons immediately
+        if (Minecraft.getInstance().screen instanceof InventoryScreen inv) {
+            inv.init(inv.width, inv.height);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onMouseScrolled(ScreenEvent.MouseScrolled.Pre event) {
+        if (event.getScreen() instanceof InventoryScreen && activePanel != Panel.NONE) {
+            // Route scroll events to our panels
+            if (activePanel == Panel.UNLOCKS) {
+                SkillUnlocksScreen.handleScroll(event.getScrollDeltaY());
+            }
         }
     }
 
     @SubscribeEvent
     public static void onMousePressed(ScreenEvent.MouseButtonPressed.Pre event) {
-        if (event.getScreen() instanceof InventoryScreen inv && isShiftDown() && event.getButton() == 0) {
-            double mx = event.getMouseX();
-            double my = event.getMouseY();
-            int x = inv.getLeftPos() + 77;
+        if (!(event.getScreen() instanceof InventoryScreen inv)) return;
+        if (event.getButton() != 0) return;
+
+        double mx = event.getMouseX();
+        double my = event.getMouseY();
+
+        // Handle Button Grabbing
+        if (isShiftDown()) {
+            int x = getBaseX(inv) + 77;
             int y = inv.getTopPos();
 
             if (isMouseOver(mx, my, x + OSLConfig.STATS_BUTTON_X.get(), y + 43 + OSLConfig.STATS_BUTTON_Y.get())) {
@@ -67,6 +120,23 @@ public class InventoryStyleOverlay {
             } else if (isMouseOver(mx, my, x + OSLConfig.SPELLS_BUTTON_X.get(), y + 7 + OSLConfig.SPELLS_BUTTON_Y.get())) {
                 grab(mx, my, OSLConfig.SPELLS_BUTTON_X.get(), OSLConfig.SPELLS_BUTTON_Y.get(), DraggedButton.SPELLS);
             }
+        } 
+        
+        // Handle Panel Interactions (Clicking skills to open unlocks, etc.)
+        if (activePanel != Panel.NONE) {
+            int panelX = inv.getLeftPos() + 180; // Docked relative to the moving inventory
+            int panelY = inv.getTopPos();
+            
+            if (activePanel == Panel.SKILLS) {
+                LevelScreen.handleOverlayClick(mx, my, panelX, panelY);
+            } else if (activePanel == Panel.STATS) {
+                CharacterStatsScreen.handleOverlayClick(mx, my, panelX, panelY);
+            } else if (activePanel == Panel.SPELLS) {
+                SpellScreen.handleOverlayClick(mx, my, panelX, panelY);
+            }
+            
+            // Handle "X" Close click for panels
+            if (isMouseOver(mx, my, panelX + 100 - 15, panelY + 5)) activePanel = Panel.NONE;
         }
     }
 
@@ -106,20 +176,24 @@ public class InventoryStyleOverlay {
 
     @SubscribeEvent
     public static void onForegroundRender(net.neoforged.neoforge.client.event.ContainerScreenEvent.Render.Foreground event) {
-        if (event.getContainerScreen() instanceof InventoryScreen) {
-            // In the Foreground event, 0,0 is the top-left of the inventory box (leftPos, topPos)
-            int x = 77;
+        if (event.getContainerScreen() instanceof InventoryScreen inv) {
+            // Calculate the shift caused by the Recipe Book
+            // inv.getLeftPos() moves right when the book is open, so we subtract that shift
+            // to keep our icons at the stationary 'Base X'
+            int recipeBookShift = inv.getLeftPos() - getBaseX(inv);
+            
+            int x = 77 - recipeBookShift;
             int y = 0;
 
             // Render STATS icon
             event.getGuiGraphics().item(new ItemStack(Items.NETHERITE_HELMET),
-                    x + OSLConfig.STATS_BUTTON_X.get(), y + 43 + OSLConfig.STATS_BUTTON_Y.get());
+                    x + OSLConfig.STATS_BUTTON_X.get(), y + 41 + OSLConfig.STATS_BUTTON_Y.get());
 
             // Render SKILLS icon
             event.getGuiGraphics().pose().pushMatrix();
             event.getGuiGraphics().pose().translate(
                     (x + OSLConfig.SKILLS_BUTTON_X.get() + 1.5f),
-                    (y + 25 + OSLConfig.SKILLS_BUTTON_Y.get() + 1.5f),
+                    (y + 23 + OSLConfig.SKILLS_BUTTON_Y.get() + 1.5f),
                     event.getGuiGraphics().pose());
             event.getGuiGraphics().pose().scale(0.8f, 0.8f, event.getGuiGraphics().pose());
             event.getGuiGraphics().item(new ItemStack(Items.EXPERIENCE_BOTTLE), 0, 0);
@@ -129,12 +203,33 @@ public class InventoryStyleOverlay {
             event.getGuiGraphics().pose().pushMatrix();
             event.getGuiGraphics().pose().translate(
                     (float)(x + OSLConfig.SPELLS_BUTTON_X.get() + 2),
-                    (float)(y + 7 + OSLConfig.SPELLS_BUTTON_Y.get() + 2),
+                    (float)(y + 5 + OSLConfig.SPELLS_BUTTON_Y.get() + 2),
                     event.getGuiGraphics().pose());
             event.getGuiGraphics().pose().scale(0.75f, 0.75f, event.getGuiGraphics().pose());
             event.getGuiGraphics().item(new ItemStack(Items.ENCHANTED_BOOK), 0, 0);
             event.getGuiGraphics().pose().popMatrix();
+
+            // Render the Active Panel Overlay
+            if (activePanel != Panel.NONE) {
+                // We do NOT subtract recipeBookShift here because we want the panel 
+                // to move with the inventory (which is already translated)
+                int px = 180; 
+                int py = 0;
+                // We pass the raw mouse coordinates (absolute) to handle tooltips correctly
+                switch (activePanel) {
+                    case STATS -> CharacterStatsScreen.renderOverlay(event.getGuiGraphics(), px, py, event.getMouseX(), event.getMouseY());
+                    case SKILLS -> LevelScreen.renderOverlay(event.getGuiGraphics(), px, py, event.getMouseX(), event.getMouseY());
+                    case SPELLS -> SpellScreen.renderOverlay(event.getGuiGraphics(), px, py, event.getMouseX(), event.getMouseY());
+                    case UNLOCKS -> SkillUnlocksScreen.renderOverlay(event.getGuiGraphics(), px, py, selectedSkill);
+                }
+            }
         }
+    }
+
+    // 176 is the standard width of the inventory texture. 
+    // This calculates where the inventory SHOULD be if the recipe book was closed.
+    private static int getBaseX(InventoryScreen inv) {
+        return (inv.width - 176) / 2;
     }
 
     private static boolean isShiftDown() {

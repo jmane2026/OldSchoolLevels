@@ -153,11 +153,11 @@ public class RequirementUtils {
     }
 
     public static float getDefenseArmorBonus(int level) {
-        return (level - 1) * 0.21f; // ~20.5 Armor points at Level 99
+        return (level - 1) * 0.2041f; // ~20.5 Armor points at Level 99
     }
 
     public static float getDefenseToughnessBonus(int level) {
-        return (level - 1) * 0.125f; // ~12.2 Toughness points at Level 99 (Netherite Tier)
+        return (level - 1) * 0.1225f; // ~12.2 Toughness points at Level 99 (Netherite Tier)
     }
 
     public static float getMovementSpeedBonus(int level) {

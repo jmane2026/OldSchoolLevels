@@ -10,18 +10,101 @@ import com.jmane2026.oldschoollevels.util.ExperienceUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.attachment.IAttachmentHolder;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import org.jspecify.annotations.NonNull;
 import org.lwjgl.glfw.GLFW;
 
 public class CharacterStatsScreen extends Screen {
-    private static final int WIDTH = 190;
-    private static final int HEIGHT = 250;
+    private static final int WIDTH = 145; // Widened further for full labels
+    private static final int HEIGHT = 166;
+
+    public static void renderOverlay(GuiGraphicsExtractor graphics, int x, int y, int ignoredMouseX, int ignoredMouseY) {
+        Minecraft mc = Minecraft.getInstance();
+        IAttachmentHolder holder = mc.player;
+        if (holder == null) return;
+
+        SkillData data = holder.getData(ModAttachments.SKILLS.get());
+        CombatStyle currentStyle = holder.getData(ModAttachments.COMBAT_STYLE.get());
+
+        // Background
+        graphics.fill(x, y, x + WIDTH, y + HEIGHT, 0xFFC6C6C6);
+        graphics.fill(x, y, x + WIDTH, y + 1, 0xFFFFFFFF);
+        graphics.fill(x, y, x + 1, y + HEIGHT, 0xFFFFFFFF);
+        graphics.fill(x, y + HEIGHT - 1, x + WIDTH, y + HEIGHT, 0xFF555555);
+        graphics.fill(x + WIDTH - 1, y, x + WIDTH, y + HEIGHT, 0xFF555555);
+
+        int titleWidth = mc.font.width("Stats");
+        graphics.text(mc.font, "Stats", x + (WIDTH / 2) - (titleWidth / 2), y + 6, 0xFF404040, false);
+
+        // Style Selection Header
+        graphics.text(mc.font, "Combat Style:", x + 5, y + 16, 0xFF404040, false);
+
+        int styleX = x + 5;
+        int styleY = y + 25;
+        for (CombatStyle style : CombatStyle.values()) {
+            boolean active = style == currentStyle;
+            // Draw Button Visual
+            Identifier sprite = active ? Identifier.withDefaultNamespace("widget/button_highlighted") : Identifier.withDefaultNamespace("widget/button");
+            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, styleX, styleY, 32, 11);
+            
+            graphics.pose().pushMatrix();
+            graphics.pose().translate((float)styleX + 2, (float)styleY + 3, graphics.pose());
+            graphics.pose().scale(0.42f, 0.42f, graphics.pose()); // Shrink text to fit buttons
+            graphics.text(mc.font, style.getName().getString(), 0, 0, 0xFF404040, false);
+            graphics.pose().popMatrix();
+            styleX += 33;
+        }
+
+        int statY = y + 42;
+        int lineGap = 8;
+        float scale = 0.7f;
+
+        renderStatOverlay(graphics, mc, "Strength:", getStrBonusStatic(data, currentStyle), x + 5, statY, scale);
+        renderStatOverlay(graphics, mc, "Attack Speed:", getAtkBonusStatic(data, currentStyle), x + 5, statY += lineGap, scale);
+        renderStatOverlay(graphics, mc, "Defense:", getDefBonusStatic(data, currentStyle), x + 5, statY += lineGap, scale);
+        renderStatOverlay(graphics, mc, "Health:", getLifeBonusStatic(data), x + 5, statY += lineGap, scale);
+        renderStatOverlay(graphics, mc, "Ranged Damage:", getRangedBonusStatic(data), x + 5, statY += lineGap, scale);
+        renderStatOverlay(graphics, mc, "Magic:", getMagicBonusStatic(data), x + 5, statY += lineGap, scale);
+        
+        int mobLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MOBILITY));
+        renderStatOverlay(graphics, mc, "Movement Speed:", String.format("+%.1f%%", (mobLvl - 1) * 1.5f), x + 5, statY += lineGap + 4, scale);
+        renderStatOverlay(graphics, mc, "Swimming Efficiency:", String.format("+%d%%", (int)(RequirementUtils.getSwimSpeedBonus(mobLvl) * 100)), x + 5, statY += lineGap, scale);
+        renderStatOverlay(graphics, mc, "Max Stamina:", String.format("%.0f", RequirementUtils.getMaxStamina(mobLvl)), x + 5, statY += lineGap, scale);
+
+        int miningLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MINING));
+        int woodLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.WOODCUTTING));
+        renderStatOverlay(graphics, mc, "Mining Bonus:", "+" + (miningLvl - 1) + "%", x + 5, statY += lineGap + 4, scale);
+        renderStatOverlay(graphics, mc, "Woodcutting Bonus:", "+" + (woodLvl - 1) + "%", x + 5, statY + lineGap, scale);
+    }
+
+    public static Component getStyleTooltip(CombatStyle style) {
+        return switch (style) {
+            case ACCURATE -> Component.literal("§eAccurate§r\nFocuses on precision.\nProvides +100% Attack Speed bonus scaling.");
+            case AGGRESSIVE -> Component.literal("§eAggressive§r\nFocuses on power.\nProvides +100% Strength bonus scaling.");
+            case DEFENSIVE -> Component.literal("§eDefensive§r\nFocuses on protection.\nProvides +100% Defense bonus scaling.");
+            case CONTROLLED -> Component.literal("§eControlled§r\nBalanced approach.\nSplits bonus between Attack, Strength, and Defense.");
+        };
+    }
+
+    public static void handleOverlayClick(double ignoredMx, double ignoredMy, int ignoredX, int ignoredY) {
+        // Click logic moved to Button widgets in InventoryStyleOverlay
+    }
+
+    private static void renderStatOverlay(GuiGraphicsExtractor graphics, Minecraft mc, String label, String value, int x, int y, float scale) {
+        graphics.pose().pushMatrix();
+        graphics.pose().translate((float)x, (float)y, graphics.pose());
+        graphics.pose().scale(scale, scale, graphics.pose());
+        graphics.text(mc.font, label, 0, 0, 0xFF404040, false);
+        graphics.text(mc.font, value, 120, 0, 0xFF0000AA, false); // Adjusted for 140px width
+        graphics.pose().popMatrix();
+    }
 
     public CharacterStatsScreen() {
         super(Component.literal("Character Sheet"));
@@ -109,12 +192,12 @@ public class CharacterStatsScreen extends Screen {
         int statY = combatY + 11;
         int lineGap = 8; // Tight gap
 
-        renderStat(graphics, "Strength:", getStrBonus(data, currentStyle), startX + 15, statY);
-        renderStat(graphics, "Swing Speed:", getAtkBonus(data, currentStyle), startX + 15, statY += lineGap);
-        renderStat(graphics, "Defense:", getDefBonus(data, currentStyle), startX + 15, statY += lineGap);
-        renderStat(graphics, "Health:", getLifeBonus(data), startX + 15, statY += lineGap);
-        renderStat(graphics, "Ranged Dmg:", getRangedBonus(data), startX + 15, statY += lineGap);
-        renderStat(graphics, "Magic Bonus:", getMagicBonus(data), startX + 15, statY += lineGap);
+        renderStat(graphics, "Strength:", getStrBonusStatic(data, currentStyle), startX + 15, statY);
+        renderStat(graphics, "Swing Speed:", getAtkBonusStatic(data, currentStyle), startX + 15, statY += lineGap);
+        renderStat(graphics, "Defense:", getDefBonusStatic(data, currentStyle), startX + 15, statY += lineGap);
+        renderStat(graphics, "Health:", getLifeBonusStatic(data), startX + 15, statY += lineGap);
+        renderStat(graphics, "Ranged Dmg:", getRangedBonusStatic(data), startX + 15, statY += lineGap);
+        renderStat(graphics, "Magic Bonus:", getMagicBonusStatic(data), startX + 15, statY += lineGap);
 
         int mobilityY = statY + 11;
         int mobLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MOBILITY));
@@ -154,36 +237,36 @@ public class CharacterStatsScreen extends Screen {
     }
 
 
-    private String getStrBonus(SkillData data, CombatStyle style) {
+    public static String getStrBonusStatic(SkillData data, CombatStyle style) {
         int lvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.STRENGTH));
         double bonus = ((lvl - 1) * style.getStrengthScale());
         return String.format("+%.1f%%", bonus);
     }
 
-    private String getAtkBonus(SkillData data, CombatStyle style) {
+    public static String getAtkBonusStatic(SkillData data, CombatStyle style) {
         int lvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.ATTACK));
         double bonus = (lvl - 1) * 0.05 * style.getAttackSpeedScale();
         return String.format("+%.2f", bonus);
     }
 
-    private String getDefBonus(SkillData data, CombatStyle style) {
+    public static String getDefBonusStatic(SkillData data, CombatStyle style) {
         int lvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.DEFENSE));
         double armor = RequirementUtils.getDefenseArmorBonus(lvl) * style.getDefenseScale();
-        double toughness = RequirementUtils.getDefenseToughnessBonus(lvl) * style.getDefenseScale();
-        return String.format("+%.1f / %.1f", armor, toughness);
+        double max = RequirementUtils.getDefenseArmorBonus(lvl);
+        return String.format("%.1f / %.1f", armor, max);
     }
 
-    private String getLifeBonus(SkillData data) {
+    public static String getLifeBonusStatic(SkillData data) {
         int lvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.LIFE));
         return String.format("+%.1f HP", Math.max(0, (lvl - 10) * 0.5));
     }
 
-    private String getRangedBonus(SkillData data) {
+    public static String getRangedBonusStatic(SkillData data) {
         int lvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.RANGED));
         return String.format("+%d%%", lvl - 1);
     }
 
-    private String getMagicBonus(SkillData data) {
+    public static String getMagicBonusStatic(SkillData data) {
         int lvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MAGIC));
         // 1% per level logic: Level 6 = +6%
         return String.format("+%d%%", lvl - 1);

@@ -21,11 +21,12 @@ import org.lwjgl.glfw.GLFW;
 import java.util.List;
 
 public class LevelScreen extends Screen {
-    private static final int PANEL_WIDTH = 160;
-    private static final int PANEL_HEIGHT = 245;
+    private static final int PANEL_WIDTH = 105; // Widened for 4 columns
+    private static final int PANEL_HEIGHT = 166; // Matches inventory height
+    private static final int BOX_SIZE = 28;
+    private static final int SPACING = 1; // Tighter spacing for 4-wide
+    private static final int PADDING = 6;
     private static final int MARGIN = 10;
-    private static final int BOX_SIZE = 38;
-    private static final int SPACING = 3;
 
     public LevelScreen(Component title) {
         super(title);
@@ -55,11 +56,11 @@ public class LevelScreen extends Screen {
         }
     }
 
-    @Override
-    public void extractRenderState(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
-        // Calculate bottom right position
-        int x = this.width - PANEL_WIDTH - MARGIN;
-        int y = this.height - PANEL_HEIGHT - MARGIN;
+    public static void renderOverlay(GuiGraphicsExtractor graphics, int x, int y, int mouseX, int mouseY) {
+        Minecraft mc = Minecraft.getInstance();
+        // Mouse relative to the panel inside the Foreground Render
+        int relMouseX = mouseX - (mc.screen instanceof InventoryScreen inv ? inv.getLeftPos() : 0);
+        int relMouseY = mouseY - (mc.screen instanceof InventoryScreen inv ? inv.getTopPos() : 0);
 
         // 1. Fill the main inner panel background with vanilla gray
         graphics.fill(x, y, x + PANEL_WIDTH, y + PANEL_HEIGHT, 0xFFC6C6C6);
@@ -73,30 +74,35 @@ public class LevelScreen extends Screen {
         graphics.fill(x + PANEL_WIDTH - 1, y, x + PANEL_WIDTH, y + PANEL_HEIGHT, 0xFF555555); // Right edge
 
         // Title - Converted to drawString with NO drop shadow and dark gray text
-        int titleWidth = this.font.width(this.title);
-        graphics.text(this.font, this.title, x + (PANEL_WIDTH / 2) - (titleWidth / 2), y + 5, 0xFF404040, false);
+        int titleWidth = mc.font.width("Skills");
+        graphics.text(mc.font, "Skills", x + (PANEL_WIDTH / 2) - (titleWidth / 2), y + 5, 0xFF404040, false);
 
-        int startX = x + 20; // Increased padding to center the grid
-        int startY = y + 20; // Pushed down to clear the title/X button
+        int startX = x + PADDING;
+        int startY = y + 18;
         int totalLevel = 0;
         Skill hoveredSkill = null;
+
+        // Scale the entire grid down to fit the smaller panel
+        graphics.pose().pushMatrix();
+        graphics.pose().translate(startX, startY, graphics.pose());
+        graphics.pose().scale(0.8f, 0.8f, graphics.pose());
 
         // Temporary variables for Combat Level calculation
         int atk = 1, def = 1, str = 1, hp = 10, range = 1;
         double pray = 1, mage = 1;
 
         // Fetch the player's real skill data from Attachments
-        SkillData skillData = Minecraft.getInstance().player != null
-                ? Minecraft.getInstance().player.getData(ModAttachments.SKILLS)
+        SkillData skillData = mc.player != null
+                ? mc.player.getData(ModAttachments.SKILLS)
                 : SkillData.EMPTY;
 
         Skill[] skills = Skill.values();
         for (int i = 0; i < skills.length; i++) {
             Skill skill = skills[i];
-            int col = i % 3;
-            int row = i / 3;
-            int bx = startX + (col * (BOX_SIZE + SPACING));
-            int by = startY + (row * (BOX_SIZE + SPACING));
+            int col = i % 4; // Shifted to 4 columns
+            int row = i / 4;
+            int bx = (col * (BOX_SIZE + SPACING));
+            int by = (row * (BOX_SIZE + SPACING));
 
             // Draw Skill Box - Solid, opaque darker panel background with a subtle border match
             graphics.fill(bx, by, bx + BOX_SIZE, by + BOX_SIZE, 0xFF8B8B8B);
@@ -118,7 +124,7 @@ public class LevelScreen extends Screen {
             if (skill.getSpriteIcon() != null) {
                 if (skill == Skill.MAGIC) {
                     // Calculate the current animation frame (0-31)
-                    long time = Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getGameTime() : 0;
+                    long time = mc.level != null ? mc.level.getGameTime() : 0;
                     int frameIndex = (int) ((time / 2) % 32); // Change frame every 2 ticks
                     int vOffset = frameIndex * 16;
 
@@ -131,22 +137,21 @@ public class LevelScreen extends Screen {
             }
 
             // Render Level Text - Adjusted to a readable yellow/gold with NO drop shadow
-            String lvlStr = "Lvl: " + level + "/99";
+            String lvlStr = level + "/99";
             graphics.pose().pushMatrix();
-            // Move to the horizontal center of the box and the desired Y position
-            graphics.pose().translate(bx + (BOX_SIZE / 2f), by + 28f, graphics.pose());
-            graphics.pose().scale(0.65f, 0.65f, graphics.pose());
-
-            // Converted to drawString with shadow disabled (false)
-            graphics.text(this.font, lvlStr, (int) (-(this.font.width(lvlStr) / 2f)), 0, 0xFFFFFF00, false);
+            graphics.pose().translate(bx + (BOX_SIZE / 2f), by + 20f, graphics.pose());
+            graphics.pose().scale(0.45f, 0.5f, graphics.pose()); // Shrunk to fit 4-wide boxes
+            graphics.text(mc.font, lvlStr, (int) (-(mc.font.width(lvlStr) / 2f)), 0, 0xFFFFFF00, false);
             graphics.pose().popMatrix();
 
             // Check Hover & Draw Hover Overlay
-            if (mouseX >= bx && mouseX <= bx + BOX_SIZE && mouseY >= by && mouseY <= by + BOX_SIZE) {
+            if (relMouseX >= startX + bx * 0.8f && relMouseX <= startX + (bx + BOX_SIZE) * 0.8f &&
+                    relMouseY >= startY + by * 0.8f && relMouseY <= startY + (by + BOX_SIZE) * 0.8f) {
                 graphics.fill(bx, by, bx + BOX_SIZE, by + BOX_SIZE, 0x22FFFFFF); // Translucent hover panel
                 hoveredSkill = skill;
             }
         }
+        graphics.pose().popMatrix();
 
         // Combat Level Calculation (OSRS Formula)
         double base = 0.25 * (def + hp + Math.floor(pray / 2));
@@ -156,23 +161,24 @@ public class LevelScreen extends Screen {
         int combatLevel = (int) (base + Math.max(melee, Math.max(ranged, magic)));
 
         // Summary Info (Bottom area of the panel)
-        String combatText = "Combat Lvl: " + combatLevel;
-        String totalText = "Total Lvl: " + totalLevel;
-        int ty = y + PANEL_HEIGHT - 16;
+        String combatText = "Combat Level: " + combatLevel;
+        String totalText = "Total Level: " + totalLevel;
+        int ty = y + PANEL_HEIGHT - 11;
 
-        // Render Combat Level (Left Aligned at bottom - NO Drop Shadow)
+        // Total Level (Bottom Left)
         graphics.pose().pushMatrix();
-        graphics.pose().translate(x + 8f, ty, graphics.pose());
-        graphics.pose().scale(0.85f, 0.85f, graphics.pose());
-        graphics.text(this.font, combatText, 0, 0, 0xFFD47A00, false); // Darker orange/gold for contrast
+        graphics.pose().translate(x + PADDING, ty, graphics.pose());
+        graphics.pose().scale(0.7f, 0.7f, graphics.pose());
+        graphics.text(mc.font, totalText, 0, 0, 0xFFD47A00, false);
         graphics.pose().popMatrix();
 
-        // Render Total Level (Right Aligned at bottom - NO Drop Shadow)
+        // Combat Level (Stacked above Total Level)
         graphics.pose().pushMatrix();
-        graphics.pose().translate(x + PANEL_WIDTH - 8f, ty, graphics.pose());
-        graphics.pose().scale(0.85f, 0.85f, graphics.pose());
-        graphics.text(this.font, totalText, (-this.font.width(totalText)), 0, 0xFFD47A00, false);
+        graphics.pose().translate(x + PADDING, ty - 8, graphics.pose());
+        graphics.pose().scale(0.7f, 0.7f, graphics.pose()); // Combat is slightly smaller secondary info
+        graphics.text(mc.font, combatText, 0, 0, 0xFFD47A00, false);
         graphics.pose().popMatrix();
+
 
         // Tooltip Rendering
         if (hoveredSkill != null) {
@@ -181,21 +187,46 @@ public class LevelScreen extends Screen {
             long toNext = ExperienceUtils.getXpToNextLevel(xp);
             boolean clickable = hoveredSkill != Skill.STRENGTH && hoveredSkill != Skill.LIFE;
 
+            // Tooltips are screen-space; reset pose to ensure they don't drift
+            graphics.pose().pushMatrix();
+            graphics.pose().identity();
             graphics.tooltip(
-                    this.font,
+                    mc.font,
                     List.of(
                             ClientTooltipComponent.create(Component.literal(hoveredSkill.getDisplayName() + ": " + lvl + "/99").getVisualOrderText()),
                             ClientTooltipComponent.create(Component.literal("Current Exp: " + xp).getVisualOrderText()),
                             ClientTooltipComponent.create(Component.literal("Exp to Level: " + (lvl >= 99 ? "MAX" : toNext)).getVisualOrderText()),
                             ClientTooltipComponent.create(Component.literal(clickable ? "§eClick to view Unlocks" : "§7No Unlocks to display").getVisualOrderText())
                     ),
+                    // Tooltips use absolute mouse coordinates; since InventoryStyleOverlay provides these, do not re-add offsets
                     mouseX,
                     mouseY,
                     DefaultTooltipPositioner.INSTANCE,
                     null
             );
+            graphics.pose().popMatrix();
         }
-        super.extractRenderState(graphics, mouseX, mouseY, a);
+    }
+
+    public static void handleOverlayClick(double mx, double my, int x, int y) {
+        int gridX = x + PADDING;
+        int gridY = y + 18;
+        Skill[] skills = Skill.values();
+        for (int i = 0; i < skills.length; i++) {
+            int col = i % 4; // Sync with 4-column render
+            int row = i / 4;
+            // Account for 0.8x scale used in rendering the grid
+            float bx = gridX + (col * (BOX_SIZE + SPACING)) * 0.8f;
+            float by = gridY + (row * (BOX_SIZE + SPACING)) * 0.8f;
+
+            if (mx >= bx && mx <= bx + (BOX_SIZE * 0.8f) && my >= by && my <= by + (BOX_SIZE * 0.8f)) {
+                Skill selected = skills[i];
+                if (selected == Skill.STRENGTH || selected == Skill.LIFE) return;
+                InventoryStyleOverlay.selectedSkill = selected;
+                InventoryStyleOverlay.activePanel = InventoryStyleOverlay.Panel.UNLOCKS;
+                return;
+            }
+        }
     }
 
     @Override
