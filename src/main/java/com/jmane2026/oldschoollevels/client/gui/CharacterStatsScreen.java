@@ -71,9 +71,6 @@ public class CharacterStatsScreen extends Screen {
 
     @Override
     public void extractRenderState(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        // Extraction of widgets happens first so they are rendered behind the background
-        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
-
         IAttachmentHolder holder = Minecraft.getInstance().player;
         if (holder == null) return;
 
@@ -85,24 +82,32 @@ public class CharacterStatsScreen extends Screen {
         int startX = centerX - (WIDTH / 2);
         int startY = centerY - (HEIGHT / 2);
 
-        // Draw Highlight for Selected Combat Style behind the background to match the buttons
+        // 1. Fill the main inner panel background with vanilla gray
+        graphics.fill(startX, startY, startX + WIDTH, startY + HEIGHT, 0xFFC6C6C6);
+
+        // 2. Draw the white highlight lines (Top and Left borders)
+        graphics.fill(startX, startY, startX + WIDTH, startY + 1, 0xFFFFFFFF); // Top edge
+        graphics.fill(startX, startY, startX + 1, startY + HEIGHT, 0xFFFFFFFF); // Left edge
+
+        // 3. Draw the dark gray shadow lines (Bottom and Right borders)
+        graphics.fill(startX, startY + HEIGHT - 1, startX + WIDTH, startY + HEIGHT, 0xFF555555); // Bottom edge
+        graphics.fill(startX + WIDTH - 1, startY, startX + WIDTH, startY + HEIGHT, 0xFF555555); // Right edge
+
+        // 4. DRAW SELECTION HIGHLIGHT HERE (On top of the gray panel, before text)
         int activeIdx = currentStyle.ordinal();
         int highlightY = startY + 30 + (activeIdx * 22);
         graphics.outline(startX + 10 - 1, highlightY - 1, 162, 22, 0xFFFFFF00);
 
-        // Draw Background
-        graphics.fill(startX, startY, startX + WIDTH, startY + HEIGHT, 0xDD000000);
-        graphics.outline(startX, startY, WIDTH, HEIGHT, 0xFFFFFFFF);
+        // Title - Converted to drawString with NO drop shadow and dark gray font
+        int titleWidth = this.font.width(this.title);
+        graphics.text(this.font, this.title, centerX - (titleWidth / 2), startY + 8, 0xFF404040, false);
 
-        // Title
-        graphics.text(this.font, this.title, centerX - (this.font.width(this.title) / 2), startY + 8, 0xFFFFAA00);
-
-        // Combat Section - Shrunk text and spacing
+        // Combat Section Header - Changed from 0xFFBBBBBB to crisp dark gray 0xFF404040
         int combatY = startY + 120;
-        graphics.text(this.font, "Combat Bonuses:", startX + 10, combatY, 0xFFBBBBBB);
-        
+        graphics.text(this.font, "Combat Bonuses:", startX + 10, combatY, 0xFF404040, false);
+
         int statY = combatY + 11;
-        int lineGap = 8; // Even tighter gap to prevent spillage
+        int lineGap = 8; // Tight gap
 
         renderStat(graphics, "Strength:", getStrBonus(data, currentStyle), startX + 15, statY);
         renderStat(graphics, "Swing Speed:", getAtkBonus(data, currentStyle), startX + 15, statY += lineGap);
@@ -117,15 +122,21 @@ public class CharacterStatsScreen extends Screen {
         renderStat(graphics, "Swim:", String.format("+%d%%", (int)(RequirementUtils.getSwimSpeedBonus(mobLvl) * 100)), startX + 15, mobilityY + lineGap);
         renderStat(graphics, "Stamina:", String.format("%.0f", RequirementUtils.getMaxStamina(mobLvl)), startX + 15, mobilityY + (lineGap * 2));
 
-        // Gathering Section
+        // Gathering Section Header - Changed from 0xFFBBBBBB to crisp dark gray 0xFF404040
         int gatherY = mobilityY + (lineGap * 3) + 1;
-        graphics.text(this.font, "Gathering Bonuses:", startX + 10, gatherY, 0xFFBBBBBB);
+        graphics.text(this.font, "Gathering Bonuses:", startX + 10, gatherY, 0xFF404040, false);
 
         int miningLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MINING));
         int woodLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.WOODCUTTING));
 
         renderStat(graphics, "Mining:", "+" + (miningLvl - 1) + "%", startX + 15, gatherY + 12);
         renderStat(graphics, "Wood Cutting:", "+" + (woodLvl - 1) + "%", startX + 15, gatherY + 22);
+
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+    }
+
+    @Override
+    public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
     }
 
     private void renderStat(GuiGraphicsExtractor graphics, String label, String value, int x, int y) {
@@ -133,12 +144,15 @@ public class CharacterStatsScreen extends Screen {
         graphics.pose().translate((float)x, (float)y, graphics.pose());
         graphics.pose().scale(0.85f, 0.85f, graphics.pose());
 
-        // Draw at origin 0,0 relative to the translation
-        graphics.text(this.font, label, 0, 0, 0xFFAAAAAA);
-        graphics.text(this.font, value, 100, 0, 0xFFFFFF00);
+        // 1. Draw label at origin with NO drop shadow - Changed to dark charcoal for contrast
+        graphics.text(this.font, label, 0, 0, 0xFF404040, false);
+
+        // 2. Draw value at 100 with NO drop shadow - Changed to dark blue (vanilla stat style)
+        graphics.text(this.font, value, 100, 0, 0xFF0000AA, false);
 
         graphics.pose().popMatrix();
     }
+
 
     private String getStrBonus(SkillData data, CombatStyle style) {
         int lvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.STRENGTH));

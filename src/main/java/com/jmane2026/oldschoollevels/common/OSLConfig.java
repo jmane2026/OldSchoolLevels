@@ -18,6 +18,13 @@ public class OSLConfig {
     public static final ModConfigSpec.BooleanValue ENABLE_MINING_SPEED_SCALING;
     public static final ModConfigSpec.BooleanValue ENABLE_WOODCUTTING_SPEED_SCALING;
 
+    public static final ModConfigSpec.IntValue STATS_BUTTON_X;
+    public static final ModConfigSpec.IntValue STATS_BUTTON_Y;
+    public static final ModConfigSpec.IntValue SKILLS_BUTTON_X;
+    public static final ModConfigSpec.IntValue SKILLS_BUTTON_Y;
+    public static final ModConfigSpec.IntValue SPELLS_BUTTON_X;
+    public static final ModConfigSpec.IntValue SPELLS_BUTTON_Y;
+
     // Client Settings
     public static final ModConfigSpec.BooleanValue ENABLE_ENTITY_HEALTH_BARS;
 
@@ -40,6 +47,17 @@ public class OSLConfig {
                 .define("enableMiningSpeedScaling", true);
         ENABLE_WOODCUTTING_SPEED_SCALING = COMMON_BUILDER.comment("Toggle break speed scaling for Woodcutting.")
                 .define("enableWoodcuttingSpeedScaling", true);
+        COMMON_BUILDER.pop();
+
+        COMMON_BUILDER.push("UI Settings");
+        STATS_BUTTON_X = COMMON_BUILDER.defineInRange("statsButtonX", 0, -1000, 1000);
+        STATS_BUTTON_Y = COMMON_BUILDER.defineInRange("statsButtonY", 0, -1000, 1000);
+
+        SKILLS_BUTTON_X = COMMON_BUILDER.defineInRange("skillsButtonX", 0, -1000, 1000);
+        SKILLS_BUTTON_Y = COMMON_BUILDER.defineInRange("skillsButtonY", 0, -1000, 1000);
+
+        SPELLS_BUTTON_X = COMMON_BUILDER.defineInRange("spellsButtonX", 0, -1000, 1000);
+        SPELLS_BUTTON_Y = COMMON_BUILDER.defineInRange("spellsButtonY", 0, -1000, 1000);
         COMMON_BUILDER.pop();
 
         CLIENT_BUILDER.push("Visuals");

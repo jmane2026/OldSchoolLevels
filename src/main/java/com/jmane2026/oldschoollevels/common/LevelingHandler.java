@@ -11,6 +11,7 @@ import com.jmane2026.oldschoollevels.network.UnlockNotificationPayload;
 import com.jmane2026.oldschoollevels.network.XpGainPayload;
 import com.jmane2026.oldschoollevels.util.ExperienceUtils;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Giant;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -40,7 +41,6 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent;
 import net.minecraft.util.TriState;
-import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
 import net.minecraft.world.phys.*;
 
 import java.lang.reflect.Field;
@@ -328,22 +328,28 @@ public class LevelingHandler {
         BlockState state = event.getState();
         Block block = state.getBlock();
 
-        // 1. Generic Furnace XP Logic (Check contents before block is destroyed)
-        if (player.level().getBlockEntity(event.getPos()) instanceof AbstractFurnaceBlockEntity furnace) {
-            ItemStack output = furnace.getItem(2); // Slot 2 is standard output
-            if (!output.isEmpty()) {
-                if (isFood(output)) awardXp(player, Skill.COOKING, getFoodXp(output) * output.getCount());
-                else awardXp(player, Skill.SMITHING, getSmithingXp(output) * output.getCount());
+        // Fix: getDrops() returns ItemEntity in 26.x
+        for (ItemEntity itemEntity : event.getDrops()) {
+            ItemStack stack = itemEntity.getItem();
+            int count = stack.getCount();
+
+            // 1. Gathering XP (Scaled by drop quantity to support Vein Mining)
+            if (state.is(BlockTags.MINEABLE_WITH_PICKAXE)) {
+                awardXp(player, Skill.MINING, getMiningXp(block) * count);
             }
-        }
+            if (state.is(BlockTags.LOGS)) {
+                awardXp(player, Skill.WOODCUTTING, getWoodcuttingXp(block) * count);
+            }
 
-        // 2. Gathering XP (Caught by BlockDropsEvent to support Vein Mining)
-        if (state.is(BlockTags.MINEABLE_WITH_PICKAXE)) {
-            awardXp(player, Skill.MINING, getMiningXp(block));
-        }
-
-        if (state.is(BlockTags.LOGS)) {
-            awardXp(player, Skill.WOODCUTTING, getWoodcuttingXp(block));
+            // 2. Generic Smithing/Cooking XP (Catches items dropped from broken Furnaces)
+            if (isFood(stack)) {
+                awardXp(player, Skill.COOKING, getFoodXp(stack) * count);
+            } else {
+                long smithXp = getSmithingXp(stack);
+                if (smithXp > 0) {
+                    awardXp(player, Skill.SMITHING, smithXp * count);
+                }
+            }
         }
     }
 
@@ -533,9 +539,14 @@ public class LevelingHandler {
             else if (path.contains("_sigil") && !path.contains("blank")) {
                 awardXp(player, Skill.ARCANA, 12L * count);
             }
+
+            // 7. Handle Cooking (e.g., Bread)
+            else if (isFood(item)) {
+                awardXp(player, Skill.COOKING, getFoodXp(item) * count);
+            }
             
-            if (isMetalGear(item) || path.contains("spear")) {
-                awardXp(player, Skill.SMITHING, 50L);
+            if (isMetalGear(item)) {
+                awardXp(player, Skill.SMITHING, getGearSmithingXp(path) * count);
             }
         }
     }
@@ -602,6 +613,16 @@ public class LevelingHandler {
         SkillAttributeHandler.refreshAttributes(player);
     }
 
+    private static long getGearSmithingXp(String path) {
+        if (path.contains("netherite")) return 100L;
+        if (path.contains("diamond") || path.contains("emerald")) return 75L;
+        if (path.contains("gold")) return 50L;
+        if (path.contains("iron")) return 35L;
+        if (path.contains("copper")) return 15L;
+        if (path.contains("flint") || path.contains("stone")) return 5L;
+        return 10L;
+    }
+
     private static long getSmithingXp(ItemStack stack) {
         if (stack.is(ModItems.BLANK_SIGIL.get())) return 5L;
         if (stack.is(Items.COPPER_INGOT)) return 15L;
@@ -638,6 +659,7 @@ public class LevelingHandler {
         if (block == Blocks.DARK_OAK_LOG || block == Blocks.DARK_OAK_WOOD) return 67;
         if (block == Blocks.MANGROVE_LOG || block == Blocks.MANGROVE_WOOD) return 60;
         if (block == Blocks.CHERRY_LOG || block == Blocks.CHERRY_WOOD) return 60;
+        if (block == Blocks.PALE_OAK_LOG || block == Blocks.PALE_OAK_WOOD) return 60;
 
         return 25;
     }
@@ -698,7 +720,8 @@ public class LevelingHandler {
     }
 
     private static boolean isFood(ItemStack stack) {
-        return stack.is(Items.COOKED_BEEF) || stack.is(Items.COOKED_CHICKEN) ||
+        return stack.is(Items.BREAD) || 
+                stack.is(Items.COOKED_BEEF) || stack.is(Items.COOKED_CHICKEN) ||
                 stack.is(Items.COOKED_PORKCHOP) || stack.is(Items.COOKED_MUTTON) ||
                 stack.is(Items.COOKED_COD) || stack.is(Items.COOKED_SALMON) ||
                 stack.is(Items.COOKED_RABBIT);
@@ -712,7 +735,7 @@ public class LevelingHandler {
         boolean isArmor = path.contains("helmet") || path.contains("chestplate") || 
                          path.contains("leggings") || path.contains("boots");
         
-        boolean isTools = path.contains("sword") || path.contains("pickaxe") || 
+        boolean isTools = path.contains("sword") || path.contains("pickaxe") || path.contains("spear") ||
                          path.contains("axe") || path.contains("shovel") || path.contains("hoe");
 
         boolean isMetal = path.contains("iron") || path.contains("gold") || 

@@ -57,32 +57,37 @@ public class LevelScreen extends Screen {
 
     @Override
     public void extractRenderState(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
-        // Call super first to ensure the base screen state (background/blur) is handled before our custom UI
-        super.extractRenderState(graphics, mouseX, mouseY, a);
-
         // Calculate bottom right position
         int x = this.width - PANEL_WIDTH - MARGIN;
         int y = this.height - PANEL_HEIGHT - MARGIN;
 
-        // Draw main panel box (OSRS style dark gray background)
-        graphics.fill(x, y, x + PANEL_WIDTH, y + PANEL_HEIGHT, 0xAA000000);
-        graphics.outline(x, y, PANEL_WIDTH, PANEL_HEIGHT, 0xFFFFFFFF); // Solid White Outline
+        // 1. Fill the main inner panel background with vanilla gray
+        graphics.fill(x, y, x + PANEL_WIDTH, y + PANEL_HEIGHT, 0xFFC6C6C6);
 
-        // Title
-        graphics.text(this.font, this.title, x + (PANEL_WIDTH / 2) - (this.font.width(this.title) / 2), y + 5, 0xFFFFFFFF);
+        // 2. Draw the white highlight lines (Top and Left borders)
+        graphics.fill(x, y, x + PANEL_WIDTH, y + 1, 0xFFFFFFFF); // Top edge
+        graphics.fill(x, y, x + 1, y + PANEL_HEIGHT, 0xFFFFFFFF); // Left edge
+
+        // 3. Draw the dark gray shadow lines (Bottom and Right borders)
+        graphics.fill(x, y + PANEL_HEIGHT - 1, x + PANEL_WIDTH, y + PANEL_HEIGHT, 0xFF555555); // Bottom edge
+        graphics.fill(x + PANEL_WIDTH - 1, y, x + PANEL_WIDTH, y + PANEL_HEIGHT, 0xFF555555); // Right edge
+
+        // Title - Converted to drawString with NO drop shadow and dark gray text
+        int titleWidth = this.font.width(this.title);
+        graphics.text(this.font, this.title, x + (PANEL_WIDTH / 2) - (titleWidth / 2), y + 5, 0xFF404040, false);
 
         int startX = x + 20; // Increased padding to center the grid
         int startY = y + 20; // Pushed down to clear the title/X button
         int totalLevel = 0;
         Skill hoveredSkill = null;
-        
+
         // Temporary variables for Combat Level calculation
         int atk = 1, def = 1, str = 1, hp = 10, range = 1;
-        double pray = 1, mage = 1; // Not in list yet, but part of formula
+        double pray = 1, mage = 1;
 
         // Fetch the player's real skill data from Attachments
-        SkillData skillData = Minecraft.getInstance().player != null 
-                ? Minecraft.getInstance().player.getData(ModAttachments.SKILLS) 
+        SkillData skillData = Minecraft.getInstance().player != null
+                ? Minecraft.getInstance().player.getData(ModAttachments.SKILLS)
                 : SkillData.EMPTY;
 
         Skill[] skills = Skill.values();
@@ -93,14 +98,14 @@ public class LevelScreen extends Screen {
             int bx = startX + (col * (BOX_SIZE + SPACING));
             int by = startY + (row * (BOX_SIZE + SPACING));
 
-            // Draw Skill Box
-            graphics.fill(bx, by, bx + BOX_SIZE, by + BOX_SIZE, 0x44FFFFFF);
-            graphics.outline(bx, by, BOX_SIZE, BOX_SIZE, 0x88FFFFFF);
+            // Draw Skill Box - Solid, opaque darker panel background with a subtle border match
+            graphics.fill(bx, by, bx + BOX_SIZE, by + BOX_SIZE, 0xFF8B8B8B);
+            graphics.outline(bx, by, BOX_SIZE, BOX_SIZE, 0xFF373737); // Dark gray inset border look
 
             long currentXp = skillData.getExperience(skill);
             int level = ExperienceUtils.getLevelAtExperience(currentXp);
             totalLevel += level;
-            
+
             // Track combat stats for the summary
             if (skill == Skill.ATTACK) atk = level;
             if (skill == Skill.DEFENSE) def = level;
@@ -125,18 +130,20 @@ public class LevelScreen extends Screen {
                 graphics.item(skill.getIcon(), bx + (BOX_SIZE / 2) - 8, by + 2);
             }
 
-            // Render Level Text
+            // Render Level Text - Adjusted to a readable yellow/gold with NO drop shadow
             String lvlStr = "Lvl: " + level + "/99";
             graphics.pose().pushMatrix();
             // Move to the horizontal center of the box and the desired Y position
             graphics.pose().translate(bx + (BOX_SIZE / 2f), by + 28f, graphics.pose());
             graphics.pose().scale(0.65f, 0.65f, graphics.pose());
-            // Draw centered at 0 (which is the center of the box due to translation)
-            graphics.text(this.font, lvlStr, (int) (-(this.font.width(lvlStr) / 2f)), 0, 0xFFFFFF00);
+
+            // Converted to drawString with shadow disabled (false)
+            graphics.text(this.font, lvlStr, (int) (-(this.font.width(lvlStr) / 2f)), 0, 0xFFFFFF00, false);
             graphics.pose().popMatrix();
 
-            // Check Hover
+            // Check Hover & Draw Hover Overlay
             if (mouseX >= bx && mouseX <= bx + BOX_SIZE && mouseY >= by && mouseY <= by + BOX_SIZE) {
+                graphics.fill(bx, by, bx + BOX_SIZE, by + BOX_SIZE, 0x22FFFFFF); // Translucent hover panel
                 hoveredSkill = skill;
             }
         }
@@ -153,18 +160,18 @@ public class LevelScreen extends Screen {
         String totalText = "Total Lvl: " + totalLevel;
         int ty = y + PANEL_HEIGHT - 16;
 
-        // Render Combat Level (Left Aligned at bottom)
+        // Render Combat Level (Left Aligned at bottom - NO Drop Shadow)
         graphics.pose().pushMatrix();
         graphics.pose().translate(x + 8f, ty, graphics.pose());
         graphics.pose().scale(0.85f, 0.85f, graphics.pose());
-        graphics.text(this.font, combatText, 0, 0, 0xFFFFAA00);
+        graphics.text(this.font, combatText, 0, 0, 0xFFD47A00, false); // Darker orange/gold for contrast
         graphics.pose().popMatrix();
 
-        // Render Total Level (Right Aligned at bottom)
+        // Render Total Level (Right Aligned at bottom - NO Drop Shadow)
         graphics.pose().pushMatrix();
         graphics.pose().translate(x + PANEL_WIDTH - 8f, ty, graphics.pose());
         graphics.pose().scale(0.85f, 0.85f, graphics.pose());
-        graphics.text(this.font, totalText, (-this.font.width(totalText)), 0, 0xFFFFAA00);
+        graphics.text(this.font, totalText, (-this.font.width(totalText)), 0, 0xFFD47A00, false);
         graphics.pose().popMatrix();
 
         // Tooltip Rendering
@@ -173,14 +180,14 @@ public class LevelScreen extends Screen {
             int lvl = ExperienceUtils.getLevelAtExperience(xp);
             long toNext = ExperienceUtils.getXpToNextLevel(xp);
             boolean clickable = hoveredSkill != Skill.STRENGTH && hoveredSkill != Skill.LIFE;
-            
+
             graphics.tooltip(
                     this.font,
                     List.of(
-                        ClientTooltipComponent.create(Component.literal(hoveredSkill.getDisplayName() + ": " + lvl + "/99").getVisualOrderText()),
-                        ClientTooltipComponent.create(Component.literal("Current Exp: " + xp).getVisualOrderText()),
-                        ClientTooltipComponent.create(Component.literal("Exp to Level: " + (lvl >= 99 ? "MAX" : toNext)).getVisualOrderText()),
-                        ClientTooltipComponent.create(Component.literal(clickable ? "§eClick to view Unlocks" : "§7No Unlocks to display").getVisualOrderText())
+                            ClientTooltipComponent.create(Component.literal(hoveredSkill.getDisplayName() + ": " + lvl + "/99").getVisualOrderText()),
+                            ClientTooltipComponent.create(Component.literal("Current Exp: " + xp).getVisualOrderText()),
+                            ClientTooltipComponent.create(Component.literal("Exp to Level: " + (lvl >= 99 ? "MAX" : toNext)).getVisualOrderText()),
+                            ClientTooltipComponent.create(Component.literal(clickable ? "§eClick to view Unlocks" : "§7No Unlocks to display").getVisualOrderText())
                     ),
                     mouseX,
                     mouseY,
@@ -188,6 +195,11 @@ public class LevelScreen extends Screen {
                     null
             );
         }
+        super.extractRenderState(graphics, mouseX, mouseY, a);
+    }
+
+    @Override
+    public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
     }
 
     @Override

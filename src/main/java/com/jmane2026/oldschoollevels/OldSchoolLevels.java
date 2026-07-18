@@ -39,6 +39,7 @@ public class OldSchoolLevels {
             event.accept(ModItems.JUNGLE_BOW);
             event.accept(ModItems.MANGROVE_BOW);
             event.accept(ModItems.SPRUCE_BOW);
+            event.accept(ModItems.PALE_OAK_BOW);
             event.accept(ModItems.FLINT_ARROW);
             event.accept(ModItems.FLINT_KNIFE);
             event.accept(ModItems.COPPER_ARROW);

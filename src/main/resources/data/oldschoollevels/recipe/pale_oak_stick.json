@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    "#oldschoollevels:knives",
+    "minecraft:pale_oak_log"
+  ],
+  "result": {
+    "id": "minecraft:stick",
+    "count": 64
+  }
+}

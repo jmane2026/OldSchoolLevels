@@ -73,15 +73,25 @@ public class SpellScreen extends Screen {
     public void extractRenderState(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         // Background and panel must be drawn BEFORE super call so widgets appear on top
         renderSpellbookBackground(graphics);
-        
-        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
 
         int x = (this.width - PANEL_WIDTH) / 2;
         int y = (this.height - PANEL_HEIGHT) / 2;
 
-        graphics.fill(x, y, x + PANEL_WIDTH, y + PANEL_HEIGHT, 0xCC000000);
-        graphics.outline(x, y, PANEL_WIDTH, PANEL_HEIGHT, 0xFFFFFFFF);
-        graphics.centeredText(this.font, this.title, x + PANEL_WIDTH / 2, y + 5, 0xFFFFFFFF);
+        // 1. Fill the main inner panel background with vanilla gray
+        graphics.fill(x, y, x + PANEL_WIDTH, y + PANEL_HEIGHT, 0xFFC6C6C6);
+
+        // 2. Draw the white highlight lines (Top and Left borders)
+        graphics.fill(x, y, x + PANEL_WIDTH, y + 1, 0xFFFFFFFF); // Top edge
+        graphics.fill(x, y, x + 1, y + PANEL_HEIGHT, 0xFFFFFFFF); // Left edge
+
+        // 3. Draw the dark gray shadow lines (Bottom and Right borders)
+        graphics.fill(x, y + PANEL_HEIGHT - 1, x + PANEL_WIDTH, y + PANEL_HEIGHT, 0xFF555555); // Bottom edge
+        graphics.fill(x + PANEL_WIDTH - 1, y, x + PANEL_WIDTH, y + PANEL_HEIGHT, 0xFF555555); // Right edge
+
+        // Measure text width to center it manually without a drop shadow
+        int textWidth = this.font.width(this.title);
+        graphics.text(this.font, this.title, (x + PANEL_WIDTH / 2) - (textWidth / 2), y + 5, 0xFF404040, false);
+
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
@@ -121,10 +131,6 @@ public class SpellScreen extends Screen {
                 hoveredSpell = spell;
             }
 
-            if (!canCast(magicLevel, spell) || !hasCosts(spell, mc, pouch)) {
-                graphics.fill(currentX, currentY, currentX + ICON_SIZE, currentY + ICON_SIZE, 0x99000000);
-            }
-
             currentX += ICON_SIZE + SPACING;
             if (currentX + ICON_SIZE > x + PANEL_WIDTH - MARGIN) {
                 currentX = x + MARGIN;
@@ -135,6 +141,8 @@ public class SpellScreen extends Screen {
         if (hoveredSpell != null) {
             renderSpellTooltip(graphics, hoveredSpell, mouseX, mouseY, magicLevel, mc.player, pouch);
         }
+
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 
     private void renderSpellbookBackground(GuiGraphicsExtractor graphics) {
@@ -246,4 +254,8 @@ public class SpellScreen extends Screen {
 
     @Override
     public boolean isPauseScreen() { return false; }
+
+    @Override
+    public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
+    }
 }
