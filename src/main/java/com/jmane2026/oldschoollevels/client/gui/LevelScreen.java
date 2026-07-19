@@ -15,6 +15,8 @@ import net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPosition
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import org.jspecify.annotations.NonNull;
 import org.lwjgl.glfw.GLFW;
 
@@ -58,9 +60,9 @@ public class LevelScreen extends Screen {
 
     public static void renderOverlay(GuiGraphicsExtractor graphics, int x, int y, int mouseX, int mouseY) {
         Minecraft mc = Minecraft.getInstance();
-        // Mouse relative to the panel inside the Foreground Render
-        int relMouseX = mouseX - (mc.screen instanceof InventoryScreen inv ? inv.getLeftPos() : 0);
-        int relMouseY = mouseY - (mc.screen instanceof InventoryScreen inv ? inv.getTopPos() : 0);
+        // Mouse relative to the panel's top-left (x, y) for accurate hit detection
+        int relMouseX = mouseX - x;
+        int relMouseY = mouseY - y;
 
         // 1. Fill the main inner panel background with vanilla gray
         graphics.fill(x, y, x + PANEL_WIDTH, y + PANEL_HEIGHT, 0xFFC6C6C6);
@@ -122,16 +124,7 @@ public class LevelScreen extends Screen {
 
             // Render Icon (Sprite or Item)
             if (skill.getSpriteIcon() != null) {
-                if (skill == Skill.MAGIC) {
-                    // Calculate the current animation frame (0-31)
-                    long time = mc.level != null ? mc.level.getGameTime() : 0;
-                    int frameIndex = (int) ((time / 2) % 32); // Change frame every 2 ticks
-                    int vOffset = frameIndex * 16;
-
-                    graphics.blit(RenderPipelines.GUI_TEXTURED, skill.getSpriteIcon(), bx + (BOX_SIZE / 2) - 8, by + 2, 0, vOffset, 16, 16, 16, 16, 16, 512, -1);
-                } else {
-                    graphics.blitSprite(RenderPipelines.GUI_TEXTURED_PREMULTIPLIED_ALPHA, skill.getSpriteIcon(), bx + (BOX_SIZE / 2) - 8, by + 2, 16, 16);
-                }
+                graphics.blitSprite(RenderPipelines.GUI_TEXTURED_PREMULTIPLIED_ALPHA, skill.getSpriteIcon(), bx + (BOX_SIZE / 2) - 8, by + 2, 16, 16);
             } else {
                 graphics.item(skill.getIcon(), bx + (BOX_SIZE / 2) - 8, by + 2);
             }
@@ -140,13 +133,13 @@ public class LevelScreen extends Screen {
             String lvlStr = level + "/99";
             graphics.pose().pushMatrix();
             graphics.pose().translate(bx + (BOX_SIZE / 2f), by + 20f, graphics.pose());
-            graphics.pose().scale(0.45f, 0.5f, graphics.pose()); // Shrunk to fit 4-wide boxes
+            graphics.pose().scale(0.4f, 0.4f, graphics.pose()); // scaled to fit 4-wide boxes
             graphics.text(mc.font, lvlStr, (int) (-(mc.font.width(lvlStr) / 2f)), 0, 0xFFFFFF00, false);
             graphics.pose().popMatrix();
 
-            // Check Hover & Draw Hover Overlay
-            if (relMouseX >= startX + bx * 0.8f && relMouseX <= startX + (bx + BOX_SIZE) * 0.8f &&
-                    relMouseY >= startY + by * 0.8f && relMouseY <= startY + (by + BOX_SIZE) * 0.8f) {
+            // Check Hover (Relative Mouse vs. Padded Grid Coordinates)
+            if (relMouseX >= PADDING + bx * 0.8f && relMouseX <= PADDING + (bx + BOX_SIZE) * 0.8f &&
+                    relMouseY >= 18 + by * 0.8f && relMouseY <= 18 + (by + BOX_SIZE) * 0.8f) {
                 graphics.fill(bx, by, bx + BOX_SIZE, by + BOX_SIZE, 0x22FFFFFF); // Translucent hover panel
                 hoveredSkill = skill;
             }
@@ -187,9 +180,6 @@ public class LevelScreen extends Screen {
             long toNext = ExperienceUtils.getXpToNextLevel(xp);
             boolean clickable = hoveredSkill != Skill.STRENGTH && hoveredSkill != Skill.LIFE;
 
-            // Tooltips are screen-space; reset pose to ensure they don't drift
-            graphics.pose().pushMatrix();
-            graphics.pose().identity();
             graphics.tooltip(
                     mc.font,
                     List.of(
@@ -198,13 +188,11 @@ public class LevelScreen extends Screen {
                             ClientTooltipComponent.create(Component.literal("Exp to Level: " + (lvl >= 99 ? "MAX" : toNext)).getVisualOrderText()),
                             ClientTooltipComponent.create(Component.literal(clickable ? "§eClick to view Unlocks" : "§7No Unlocks to display").getVisualOrderText())
                     ),
-                    // Tooltips use absolute mouse coordinates; since InventoryStyleOverlay provides these, do not re-add offsets
                     mouseX,
                     mouseY,
                     DefaultTooltipPositioner.INSTANCE,
                     null
             );
-            graphics.pose().popMatrix();
         }
     }
 
@@ -222,6 +210,13 @@ public class LevelScreen extends Screen {
             if (mx >= bx && mx <= bx + (BOX_SIZE * 0.8f) && my >= by && my <= by + (BOX_SIZE * 0.8f)) {
                 Skill selected = skills[i];
                 if (selected == Skill.STRENGTH || selected == Skill.LIFE) return;
+                
+                // Play UI Click Sound
+                Minecraft mc = Minecraft.getInstance();
+                if (mc.level != null && mc.player != null) {
+                    mc.level.playSound(mc.player, mc.player.blockPosition(), SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.MASTER, 1.0f, 1.0f);
+                }
+
                 InventoryStyleOverlay.selectedSkill = selected;
                 InventoryStyleOverlay.activePanel = InventoryStyleOverlay.Panel.UNLOCKS;
                 return;

@@ -10,6 +10,8 @@ import com.jmane2026.oldschoollevels.util.ExperienceUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
+import net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
@@ -21,11 +23,13 @@ import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import org.jspecify.annotations.NonNull;
 import org.lwjgl.glfw.GLFW;
 
+import java.util.List;
+
 public class CharacterStatsScreen extends Screen {
     private static final int WIDTH = 145; // Widened further for full labels
     private static final int HEIGHT = 166;
 
-    public static void renderOverlay(GuiGraphicsExtractor graphics, int x, int y, int ignoredMouseX, int ignoredMouseY) {
+    public static void renderOverlay(GuiGraphicsExtractor graphics, int x, int y, int mouseX, int mouseY) {
         Minecraft mc = Minecraft.getInstance();
         IAttachmentHolder holder = mc.player;
         if (holder == null) return;
@@ -48,6 +52,8 @@ public class CharacterStatsScreen extends Screen {
 
         int styleX = x + 5;
         int styleY = y + 25;
+        CombatStyle hoveredStyle = null;
+
         for (CombatStyle style : CombatStyle.values()) {
             boolean active = style == currentStyle;
             // Draw Button Visual
@@ -59,6 +65,12 @@ public class CharacterStatsScreen extends Screen {
             graphics.pose().scale(0.42f, 0.42f, graphics.pose()); // Shrink text to fit buttons
             graphics.text(mc.font, style.getName().getString(), 0, 0, 0xFF404040, false);
             graphics.pose().popMatrix();
+
+            // Check for hover to render manual tooltip (since vanilla tooltips render behind Post)
+            if (mouseX >= styleX && mouseX < styleX + 32 && mouseY >= styleY && mouseY < styleY + 11) {
+                hoveredStyle = style;
+            }
+
             styleX += 33;
         }
 
@@ -71,17 +83,28 @@ public class CharacterStatsScreen extends Screen {
         renderStatOverlay(graphics, mc, "Defense:", getDefBonusStatic(data, currentStyle), x + 5, statY += lineGap, scale);
         renderStatOverlay(graphics, mc, "Health:", getLifeBonusStatic(data), x + 5, statY += lineGap, scale);
         renderStatOverlay(graphics, mc, "Ranged Damage:", getRangedBonusStatic(data), x + 5, statY += lineGap, scale);
-        renderStatOverlay(graphics, mc, "Magic:", getMagicBonusStatic(data), x + 5, statY += lineGap, scale);
+        renderStatOverlay(graphics, mc, "Magic Power:", getMagicBonusStatic(data), x + 5, statY += lineGap, scale);
         
         int mobLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MOBILITY));
         renderStatOverlay(graphics, mc, "Movement Speed:", String.format("+%.1f%%", (mobLvl - 1) * 1.5f), x + 5, statY += lineGap + 4, scale);
-        renderStatOverlay(graphics, mc, "Swimming Efficiency:", String.format("+%d%%", (int)(RequirementUtils.getSwimSpeedBonus(mobLvl) * 100)), x + 5, statY += lineGap, scale);
+        renderStatOverlay(graphics, mc, "Swim Speed:", String.format("+%d%%", (int)(RequirementUtils.getSwimSpeedBonus(mobLvl) * 100)), x + 5, statY += lineGap, scale);
         renderStatOverlay(graphics, mc, "Max Stamina:", String.format("%.0f", RequirementUtils.getMaxStamina(mobLvl)), x + 5, statY += lineGap, scale);
 
         int miningLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.MINING));
         int woodLvl = ExperienceUtils.getLevelAtExperience(data.getExperience(Skill.WOODCUTTING));
-        renderStatOverlay(graphics, mc, "Mining Bonus:", "+" + (miningLvl - 1) + "%", x + 5, statY += lineGap + 4, scale);
-        renderStatOverlay(graphics, mc, "Woodcutting Bonus:", "+" + (woodLvl - 1) + "%", x + 5, statY + lineGap, scale);
+        renderStatOverlay(graphics, mc, "Mining Speed:", "+" + (miningLvl - 1) + "%", x + 5, statY += lineGap + 4, scale);
+        renderStatOverlay(graphics, mc, "Woodcutting Speed:", "+" + (woodLvl - 1) + "%", x + 5, statY + lineGap, scale);
+
+        // Render the manual tooltip last so it is on top of the sidebar
+        if (hoveredStyle != null) {
+            // Split the tooltip string by newlines and convert each line into a tooltip component
+            List<ClientTooltipComponent> tooltipComponents = new java.util.ArrayList<>();
+            for (String line : getStyleTooltip(hoveredStyle).getString().split("\n")) {
+                tooltipComponents.add(ClientTooltipComponent.create(Component.literal(line).getVisualOrderText()));
+            }
+
+            graphics.tooltip(mc.font, tooltipComponents, mouseX, mouseY, DefaultTooltipPositioner.INSTANCE, null);
+        }
     }
 
     public static Component getStyleTooltip(CombatStyle style) {

@@ -6,12 +6,17 @@ import com.jmane2026.oldschoollevels.common.Skill;
 import com.jmane2026.oldschoollevels.common.CombatStyle;
 import com.jmane2026.oldschoollevels.core.ModAttachments;
 import com.jmane2026.oldschoollevels.network.ChangeStylePayload;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.neoforge.client.event.ContainerScreenEvent;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.Window;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
+import net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
@@ -21,6 +26,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 import org.lwjgl.glfw.GLFW;
+import java.util.List;
 
 @EventBusSubscriber(modid = OldSchoolLevels.MODID, value = Dist.CLIENT)
 public class InventoryStyleOverlay {
@@ -44,20 +50,17 @@ public class InventoryStyleOverlay {
             // Stats Button
             event.addListener(Button.builder(Component.empty(), (_) -> {
                         if (!isShiftDown()) togglePanel(Panel.STATS);
-                    }).bounds(x + OSLConfig.STATS_BUTTON_X.get(), y + 41 + OSLConfig.STATS_BUTTON_Y.get(), 16, 16)
-                    .tooltip(Tooltip.create(Component.literal("Character Sheet (Shift+Drag to Move)"))).build());
+                    }).bounds(x + OSLConfig.STATS_BUTTON_X.get(), y + 41 + OSLConfig.STATS_BUTTON_Y.get(), 16, 16).build());
 
             // Skills Button
             event.addListener(Button.builder(Component.empty(), (_) -> {
                         if (!isShiftDown()) togglePanel(Panel.SKILLS);
-                    }).bounds(x + OSLConfig.SKILLS_BUTTON_X.get(), y + 23 + OSLConfig.SKILLS_BUTTON_Y.get(), 16, 16)
-                    .tooltip(Tooltip.create(Component.literal("Skills (Shift+Drag to Move)"))).build());
+                    }).bounds(x + OSLConfig.SKILLS_BUTTON_X.get(), y + 23 + OSLConfig.SKILLS_BUTTON_Y.get(), 16, 16).build());
 
             // Spells Button
             event.addListener(Button.builder(Component.empty(), (_) -> {
                         if (!isShiftDown()) togglePanel(Panel.SPELLS);
-                    }).bounds(x + OSLConfig.SPELLS_BUTTON_X.get(), y + 5 + OSLConfig.SPELLS_BUTTON_Y.get(), 16, 16)
-                    .tooltip(Tooltip.create(Component.literal("Spellbook (Shift+Drag to Move)"))).build());
+                    }).bounds(x + OSLConfig.SPELLS_BUTTON_X.get(), y + 5 + OSLConfig.SPELLS_BUTTON_Y.get(), 16, 16).build());
 
             // Combat Style Buttons (Only when Stats panel is active)
             if (activePanel == Panel.STATS) {
@@ -72,7 +75,6 @@ public class InventoryStyleOverlay {
                         ClientPacketDistributor.sendToServer(new ChangeStylePayload(s));
                         inv.init(inv.width, inv.height); // Refresh to update highlights
                     }).bounds(styleX, styleY, 32, 11)
-                      .tooltip(Tooltip.create(CharacterStatsScreen.getStyleTooltip(s)))
                       .build());
                     styleX += 33;
                 }
@@ -136,7 +138,24 @@ public class InventoryStyleOverlay {
             }
             
             // Handle "X" Close click for panels
-            if (isMouseOver(mx, my, panelX + 100 - 15, panelY + 5)) activePanel = Panel.NONE;
+            int closeXOffset = switch (activePanel) {
+                case STATS -> 145;
+                case SPELLS -> 85;
+                case SKILLS, UNLOCKS -> 105;
+                default -> 100;
+            };
+
+            if (isMouseOver(mx, my, panelX + closeXOffset - 15, panelY + 2)) {
+                // Play UI Click Sound
+                Minecraft mc = Minecraft.getInstance();
+                assert mc.level != null;
+                assert mc.player != null;
+                mc.level.playSound(mc.player, mc.player.blockPosition(), SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.MASTER, 1.0f, 1.0f);
+                
+                // If closing Unlocks, go back to Skills. Otherwise, close the panel.
+                if (activePanel == Panel.UNLOCKS) activePanel = Panel.SKILLS;
+                else activePanel = Panel.NONE;
+            }
         }
     }
 
@@ -175,13 +194,10 @@ public class InventoryStyleOverlay {
     }
 
     @SubscribeEvent
-    public static void onForegroundRender(net.neoforged.neoforge.client.event.ContainerScreenEvent.Render.Foreground event) {
+    public static void onForegroundRender(ContainerScreenEvent.Render.Foreground event) {
         if (event.getContainerScreen() instanceof InventoryScreen inv) {
-            // Calculate the shift caused by the Recipe Book
-            // inv.getLeftPos() moves right when the book is open, so we subtract that shift
-            // to keep our icons at the stationary 'Base X'
             int recipeBookShift = inv.getLeftPos() - getBaseX(inv);
-            
+
             int x = 77 - recipeBookShift;
             int y = 0;
 
@@ -208,20 +224,43 @@ public class InventoryStyleOverlay {
             event.getGuiGraphics().pose().scale(0.75f, 0.75f, event.getGuiGraphics().pose());
             event.getGuiGraphics().item(new ItemStack(Items.ENCHANTED_BOOK), 0, 0);
             event.getGuiGraphics().pose().popMatrix();
+        }
+    }
 
-            // Render the Active Panel Overlay
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void onPostRender(ScreenEvent.Render.Post event) {
+        if (event.getScreen() instanceof InventoryScreen inv) {
+            int px = inv.getLeftPos() + 180;
+            int py = inv.getTopPos();
+
             if (activePanel != Panel.NONE) {
-                // We do NOT subtract recipeBookShift here because we want the panel 
-                // to move with the inventory (which is already translated)
-                int px = 180; 
-                int py = 0;
-                // We pass the raw mouse coordinates (absolute) to handle tooltips correctly
+                // Render the Active Panel Overlay
+                // Because this is 'Post', it renders above JEI and vanilla UI elements
                 switch (activePanel) {
                     case STATS -> CharacterStatsScreen.renderOverlay(event.getGuiGraphics(), px, py, event.getMouseX(), event.getMouseY());
                     case SKILLS -> LevelScreen.renderOverlay(event.getGuiGraphics(), px, py, event.getMouseX(), event.getMouseY());
                     case SPELLS -> SpellScreen.renderOverlay(event.getGuiGraphics(), px, py, event.getMouseX(), event.getMouseY());
                     case UNLOCKS -> SkillUnlocksScreen.renderOverlay(event.getGuiGraphics(), px, py, selectedSkill);
                 }
+            }
+
+            // Render Button Tooltips Manually (After sidebar to ensure they are on top)
+            int bx = getBaseX(inv) + 77;
+            int by = inv.getTopPos();
+            Minecraft mc = Minecraft.getInstance();
+            String tooltipText = null;
+
+            if (isMouseOver(event.getMouseX(), event.getMouseY(), bx + OSLConfig.STATS_BUTTON_X.get(), by + 41 + OSLConfig.STATS_BUTTON_Y.get())) {
+                tooltipText = "Character Sheet (Shift+Drag to Move)";
+            } else if (isMouseOver(event.getMouseX(), event.getMouseY(), bx + OSLConfig.SKILLS_BUTTON_X.get(), by + 23 + OSLConfig.SKILLS_BUTTON_Y.get())) {
+                tooltipText = "Skills (Shift+Drag to Move)";
+            } else if (isMouseOver(event.getMouseX(), event.getMouseY(), bx + OSLConfig.SPELLS_BUTTON_X.get(), by + 5 + OSLConfig.SPELLS_BUTTON_Y.get())) {
+                tooltipText = "Spellbook (Shift+Drag to Move)";
+            }
+
+            if (tooltipText != null) {
+                event.getGuiGraphics().tooltip(mc.font, List.of(ClientTooltipComponent.create(Component.literal(tooltipText).getVisualOrderText())), 
+                        event.getMouseX(), event.getMouseY(), DefaultTooltipPositioner.INSTANCE, null);
             }
         }
     }

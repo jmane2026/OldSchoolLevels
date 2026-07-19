@@ -6,6 +6,7 @@ import com.jmane2026.oldschoollevels.common.SkillData;
 import com.jmane2026.oldschoollevels.common.items.SigilPouchItem;
 import com.jmane2026.oldschoollevels.core.ModAttachments;
 import com.jmane2026.oldschoollevels.util.ExperienceUtils;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
@@ -78,9 +79,6 @@ public class SpellScreen extends Screen {
 
     public static void renderOverlay(GuiGraphicsExtractor graphics, int x, int y, int mouseX, int mouseY) {
         Minecraft mc = Minecraft.getInstance();
-        int relMouseX = mouseX - (mc.screen instanceof InventoryScreen inv ? inv.getLeftPos() : 0);
-        int relMouseY = mouseY - (mc.screen instanceof InventoryScreen inv ? inv.getTopPos() : 0);
-
         graphics.fill(x, y, x + PANEL_WIDTH, y + PANEL_HEIGHT, 0xFFC6C6C6);
         graphics.fill(x, y, x + PANEL_WIDTH, y + 1, 0xFFFFFFFF); // Top edge
         graphics.fill(x, y, x + 1, y + PANEL_HEIGHT, 0xFFFFFFFF); // Left edge
@@ -108,8 +106,9 @@ public class SpellScreen extends Screen {
         Spell hoveredSpell = null;
 
         for (Spell spell : Spell.values()) {
-            boolean isMouseOver = relMouseX >= currentX && relMouseX < currentX + ICON_SIZE &&
-                    relMouseY >= currentY && relMouseY < currentY + ICON_SIZE;
+            // Use absolute mouse and currentX/Y for hit detection
+            boolean isMouseOver = mouseX >= currentX && mouseX < currentX + ICON_SIZE &&
+                    mouseY >= currentY && mouseY < currentY + ICON_SIZE;
 
             // 1. Highlight ACTIVE spell in Yellow
             if (spell.equals(activeSpell)) {
@@ -175,9 +174,9 @@ public class SpellScreen extends Screen {
 
     private static void renderSpellTooltip(GuiGraphicsExtractor graphics, Minecraft mc, Spell spell, int mouseX, int mouseY, int magicLevel, Player player, ItemStack pouch) {
         List<Component> lines = new ArrayList<>();
-        lines.add(spell.getNameComponent().copy().withStyle(net.minecraft.ChatFormatting.GOLD));
+        lines.add(spell.getNameComponent().copy().withStyle(ChatFormatting.GOLD));
         lines.add(Component.literal("Required Magic: " + spell.getRequiredMagicLevel()).withStyle(
-                magicLevel >= spell.getRequiredMagicLevel() ? net.minecraft.ChatFormatting.GREEN : net.minecraft.ChatFormatting.RED));
+                magicLevel >= spell.getRequiredMagicLevel() ? ChatFormatting.GREEN : ChatFormatting.RED));
 
         lines.add(Component.empty());
         lines.add(Component.empty());
@@ -186,9 +185,6 @@ public class SpellScreen extends Screen {
         List<ClientTooltipComponent> components = lines.stream()
                 .map(Component::getVisualOrderText)
                 .map(ClientTooltipComponent::create).collect(Collectors.toList());
-
-        graphics.pose().pushMatrix();
-        graphics.pose().identity();
 
         // Calculate actual tooltip width to sync with Minecraft's internal flipping logic
         int tooltipWidth = 0;
@@ -226,7 +222,6 @@ public class SpellScreen extends Screen {
 
             iconX += 35; // Increased spacing to prevent overlapping quantity text
         }
-        graphics.pose().popMatrix();
     }
 
     @Override

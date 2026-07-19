@@ -164,6 +164,11 @@ public class SkillUnlocksScreen extends Screen {
         int titleWidth = mc.font.width(skill.getDisplayName());
         graphics.text(mc.font, skill.getDisplayName(), startX + (WIDTH / 2) - (titleWidth / 2), startY + 10, 0xFF404040, false);
 
+        // Draw "X" Close Button Visual
+        graphics.fill(startX + WIDTH - 15, startY + 2, startX + WIDTH - 2, startY + 14, 0xFF8B8B8B);
+        graphics.outline(startX + WIDTH - 15, startY + 2, 13, 12, 0xFF373737);
+        graphics.text(mc.font, "X", startX + WIDTH - 11, startY + 4, 0xFF404040, false);
+
         List<RequirementUtils.UnlockInfo> unlocks = RequirementUtils.getUnlocksForSkill(skill);
         int yPos = startY + 28;
         float scale = 0.65f; // Even smaller for overlay
