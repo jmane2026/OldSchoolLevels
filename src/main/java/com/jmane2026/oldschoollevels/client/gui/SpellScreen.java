@@ -160,7 +160,6 @@ public class SpellScreen extends Screen {
                     ClientPacketDistributor.sendToServer(new SelectSpellPayload(spell));
                     assert mc.level != null;
                     mc.level.playSound(mc.player, mc.player.blockPosition(), SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.MASTER, 1.0f, 1.0f);
-                    InventoryStyleOverlay.activePanel = InventoryStyleOverlay.Panel.NONE;
                     return;
                 }
             }
@@ -235,9 +234,7 @@ public class SpellScreen extends Screen {
 
     @Override
     public void onClose() {
-        if (this.minecraft.player != null) {
-            this.minecraft.setScreen(new InventoryScreen(this.minecraft.player));
-        }
+
     }
 
     @Override

@@ -11,6 +11,7 @@ import com.jmane2026.oldschoollevels.network.UnlockNotificationPayload;
 import com.jmane2026.oldschoollevels.network.XpGainPayload;
 import com.jmane2026.oldschoollevels.util.ExperienceUtils;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Giant;
 import net.minecraft.sounds.SoundEvents;
@@ -323,34 +324,44 @@ public class LevelingHandler {
 
     @SubscribeEvent
     public static void onBlockDrops(BlockDropsEvent event) {
-        if (!(event.getBreaker() instanceof ServerPlayer player)) return;
+        Entity breaker = event.getBreaker();
+        
+        // Fallback for vein mining mods that don't set the breaker for extra blocks
+        if (breaker == null) {
+            breaker = event.getLevel().getNearestPlayer(event.getPos().getX(), event.getPos().getY(), event.getPos().getZ(), 10, false);
+        }
+
+        if (!(breaker instanceof ServerPlayer player)) return;
 
         BlockState state = event.getState();
         Block block = state.getBlock();
 
-        // Fix: getDrops() returns ItemEntity in 26.x
+        long totalMiningXp = 0;
+        long totalWoodXp = 0;
+        long totalSmithXp = 0;
+        long totalCookXp = 0;
+
+        // Iterate through all dropped entities to calculate total XP first
         for (ItemEntity itemEntity : event.getDrops()) {
             ItemStack stack = itemEntity.getItem();
             int count = stack.getCount();
 
-            // 1. Gathering XP (Scaled by drop quantity to support Vein Mining)
             if (state.is(BlockTags.MINEABLE_WITH_PICKAXE)) {
-                awardXp(player, Skill.MINING, getMiningXp(block) * count);
+                totalMiningXp += getMiningXp(block) * count;
             }
             if (state.is(BlockTags.LOGS)) {
-                awardXp(player, Skill.WOODCUTTING, getWoodcuttingXp(block) * count);
+                totalWoodXp += getWoodcuttingXp(block) * count;
             }
 
-            // 2. Generic Smithing/Cooking XP (Catches items dropped from broken Furnaces)
-            if (isFood(stack)) {
-                awardXp(player, Skill.COOKING, getFoodXp(stack) * count);
-            } else {
-                long smithXp = getSmithingXp(stack);
-                if (smithXp > 0) {
-                    awardXp(player, Skill.SMITHING, smithXp * count);
-                }
-            }
+            if (isFood(stack)) totalCookXp += getFoodXp(stack) * count;
+            else totalSmithXp += getSmithingXp(stack) * count;
         }
+
+        // Fire single "batched" XP awards to ensure server/client sync stability
+        if (totalMiningXp > 0) awardXp(player, Skill.MINING, totalMiningXp);
+        if (totalWoodXp > 0) awardXp(player, Skill.WOODCUTTING, totalWoodXp);
+        if (totalSmithXp > 0) awardXp(player, Skill.SMITHING, totalSmithXp);
+        if (totalCookXp > 0) awardXp(player, Skill.COOKING, totalCookXp);
     }
 
     @SubscribeEvent
