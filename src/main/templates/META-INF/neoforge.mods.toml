@@ -6,6 +6,7 @@ modId="${mod_id}"
 version="${mod_version}"
 displayName="${mod_name}"
 authors="jmane2026"
+logoFile="logo.png"
 
 description='''
 RPG Progression that feels a bit "Old School"
