@@ -87,8 +87,8 @@ public class ClientTooltipHandler {
             addRequirement(reqLines, "Woodcutting", tierReq, Skill.WOODCUTTING, data);
         }
 
-        // 3. Fletching (Knives, Arrows, Bows, Heads)
-        boolean isFletchingItem = path.contains("_knife") || path.contains("_bow") || path.contains("_arrow") || path.contains("_heads") || stack.is(net.minecraft.world.item.Items.STICK);
+        // 3. Fletching (Heads, Sticks)
+        boolean isFletchingItem = path.contains("_heads") || stack.is(net.minecraft.world.item.Items.STICK);
         if (isFletchingItem) {
             addRequirement(reqLines, "Fletching", RequirementUtils.getRequiredFletchingLevel(stack), Skill.FLETCHING, data);
         }

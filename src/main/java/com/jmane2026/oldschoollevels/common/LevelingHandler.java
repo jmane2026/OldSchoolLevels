@@ -326,42 +326,67 @@ public class LevelingHandler {
     public static void onBlockDrops(BlockDropsEvent event) {
         Entity breaker = event.getBreaker();
         
-        // Fallback for vein mining mods that don't set the breaker for extra blocks
+        // Handle FakePlayers (vein miners often use them to simulate breaking)
+        if (breaker instanceof net.neoforged.neoforge.common.util.FakePlayer) {
+            breaker = null; // Force fallback to nearest player
+        }
+
+        // Fallback for vein mining mods that don't set the breaker (or use FakePlayers) for extra blocks
         if (breaker == null) {
             breaker = event.getLevel().getNearestPlayer(event.getPos().getX(), event.getPos().getY(), event.getPos().getZ(), 10, false);
         }
 
         if (!(breaker instanceof ServerPlayer player)) return;
+        if (player.isCreative()) return;
 
         BlockState state = event.getState();
         Block block = state.getBlock();
 
-        long totalMiningXp = 0;
-        long totalWoodXp = 0;
         long totalSmithXp = 0;
         long totalCookXp = 0;
 
-        // Iterate through all dropped entities to calculate total XP first
+        // 2. Iterate through dropped entities for Auto-Smelt/Cooking logic (which IS tied to yield)
         for (ItemEntity itemEntity : event.getDrops()) {
             ItemStack stack = itemEntity.getItem();
             int count = stack.getCount();
-
-            if (state.is(BlockTags.MINEABLE_WITH_PICKAXE)) {
-                totalMiningXp += getMiningXp(block) * count;
-            }
-            if (state.is(BlockTags.LOGS)) {
-                totalWoodXp += getWoodcuttingXp(block) * count;
-            }
 
             if (isFood(stack)) totalCookXp += getFoodXp(stack) * count;
             else totalSmithXp += getSmithingXp(stack) * count;
         }
 
-        // Fire single "batched" XP awards to ensure server/client sync stability
-        if (totalMiningXp > 0) awardXp(player, Skill.MINING, totalMiningXp);
-        if (totalWoodXp > 0) awardXp(player, Skill.WOODCUTTING, totalWoodXp);
         if (totalSmithXp > 0) awardXp(player, Skill.SMITHING, totalSmithXp);
         if (totalCookXp > 0) awardXp(player, Skill.COOKING, totalCookXp);
+    }
+    
+    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.LOWEST)
+    public static void onBlockBreak(net.neoforged.neoforge.event.level.block.BreakBlockEvent event) {
+        if (event.isCanceled()) return;
+        if (!(event.getPlayer() instanceof ServerPlayer player)) return;
+        
+        // Robust FakePlayer detection (covers NeoForge FakePlayer and custom ones with no connection)
+        boolean isFake = (player instanceof net.neoforged.neoforge.common.util.FakePlayer) 
+                      || player.getClass().getSimpleName().toLowerCase().contains("fake")
+                      || player.connection == null;
+
+        if (isFake) {
+            player = (ServerPlayer) event.getLevel().getNearestPlayer(event.getPos().getX(), event.getPos().getY(), event.getPos().getZ(), 15, false);
+            if (player == null) return; // No real player nearby
+        }
+        
+        if (player.isCreative()) return;
+        
+        BlockState state = event.getState();
+        Block block = state.getBlock();
+
+        // Award block-based XP once per block broken!
+        if (state.is(BlockTags.MINEABLE_WITH_PICKAXE)) {
+            long xp = getMiningXp(block);
+            if (xp > 0) awardXp(player, Skill.MINING, xp);
+        }
+        if (state.is(BlockTags.LOGS)) {
+            long xp = getWoodcuttingXp(block);
+            if (xp > 0) awardXp(player, Skill.WOODCUTTING, xp);
+        }
     }
 
     @SubscribeEvent
@@ -563,7 +588,7 @@ public class LevelingHandler {
     }
 
     private static long getBowFletchXp(String path) {
-        if (path.contains("cherry")) return 150;
+        if (path.contains("cherry") || path.contains("pale_oak")) return 150;
         if (path.contains("mangrove")) return 125;
         if (path.contains("dark_oak")) return 100;
         if (path.contains("acacia")) return 80;

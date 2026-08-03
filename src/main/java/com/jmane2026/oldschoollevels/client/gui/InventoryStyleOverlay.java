@@ -6,8 +6,10 @@ import com.jmane2026.oldschoollevels.common.Skill;
 import com.jmane2026.oldschoollevels.common.CombatStyle;
 import com.jmane2026.oldschoollevels.core.ModAttachments;
 import com.jmane2026.oldschoollevels.network.ChangeStylePayload;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.inventory.Slot;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.neoforge.client.event.ContainerScreenEvent;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
@@ -61,24 +63,6 @@ public class InventoryStyleOverlay {
             event.addListener(Button.builder(Component.empty(), (_) -> {
                         if (!isShiftDown()) togglePanel(Panel.SPELLS);
                     }).bounds(x + OSLConfig.SPELLS_BUTTON_X.get(), y + 5 + OSLConfig.SPELLS_BUTTON_Y.get(), 16, 16).build());
-
-            // Combat Style Buttons (Only when Stats panel is active)
-            if (activePanel == Panel.STATS) {
-                Minecraft mc = Minecraft.getInstance();
-                int styleX = inv.getLeftPos() + 180 + 5;
-                int styleY = inv.getTopPos() + 25;
-                for (CombatStyle style : CombatStyle.values()) {
-                    final CombatStyle s = style;
-                    event.addListener(Button.builder(Component.empty(), (_) -> {
-                                assert mc.player != null;
-                                mc.player.setData(ModAttachments.COMBAT_STYLE.get(), s);
-                        ClientPacketDistributor.sendToServer(new ChangeStylePayload(s));
-                        inv.init(inv.width, inv.height); // Refresh to update highlights
-                    }).bounds(styleX, styleY, 32, 11)
-                      .build());
-                    styleX += 33;
-                }
-            }
         }
     }
 
@@ -92,9 +76,23 @@ public class InventoryStyleOverlay {
         }
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onMouseScrolled(ScreenEvent.MouseScrolled.Pre event) {
-        if (event.getScreen() instanceof InventoryScreen && activePanel != Panel.NONE) {
+        if (event.getScreen() instanceof InventoryScreen inv && activePanel != Panel.NONE) {
+            int panelX = inv.getLeftPos() + 180;
+            int panelY = inv.getTopPos();
+            int panelWidth = switch (activePanel) {
+                case STATS -> 145;
+                case SPELLS -> 85;
+                case SKILLS, UNLOCKS -> 105;
+                default -> 0;
+            };
+
+            if (event.getMouseX() >= panelX && event.getMouseX() <= panelX + panelWidth &&
+                event.getMouseY() >= panelY && event.getMouseY() <= panelY + 166) {
+                event.setCanceled(true);
+            }
+
             // Route scroll events to our panels
             if (activePanel == Panel.UNLOCKS) {
                 SkillUnlocksScreen.handleScroll(event.getScrollDeltaY());
@@ -102,7 +100,26 @@ public class InventoryStyleOverlay {
         }
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public static void onRenderTooltipPre(net.neoforged.neoforge.client.event.RenderTooltipEvent.Pre event) {
+        if (Minecraft.getInstance().screen instanceof InventoryScreen inv && activePanel != Panel.NONE) {
+            int panelX = inv.getLeftPos() + 180;
+            int panelY = inv.getTopPos();
+            int panelWidth = switch (activePanel) {
+                case STATS -> 145;
+                case SPELLS -> 85;
+                case SKILLS, UNLOCKS -> 105;
+                default -> 0;
+            };
+
+            if (event.getX() >= panelX && event.getX() <= panelX + panelWidth &&
+                event.getY() >= panelY && event.getY() <= panelY + 166) {
+                event.setCanceled(true);
+            }
+        }
+    }
+
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onMousePressed(ScreenEvent.MouseButtonPressed.Pre event) {
         if (!(event.getScreen() instanceof InventoryScreen inv)) return;
         if (event.getButton() != 0) return;
@@ -128,6 +145,17 @@ public class InventoryStyleOverlay {
         if (activePanel != Panel.NONE) {
             int panelX = inv.getLeftPos() + 180; // Docked relative to the moving inventory
             int panelY = inv.getTopPos();
+            
+            int panelWidth = switch (activePanel) {
+                case STATS -> 145;
+                case SPELLS -> 85;
+                case SKILLS, UNLOCKS -> 105;
+                default -> 0;
+            };
+
+            if (mx >= panelX && mx <= panelX + panelWidth && my >= panelY && my <= panelY + 166) {
+                event.setCanceled(true);
+            }
             
             if (activePanel == Panel.SKILLS) {
                 LevelScreen.handleOverlayClick(mx, my, panelX, panelY);
@@ -167,8 +195,22 @@ public class InventoryStyleOverlay {
         startOffsetY = oy;
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onMouseReleased(ScreenEvent.MouseButtonReleased.Pre event) {
+        if (event.getScreen() instanceof InventoryScreen inv && activePanel != Panel.NONE) {
+            int panelX = inv.getLeftPos() + 180;
+            int panelY = inv.getTopPos();
+            int panelWidth = switch (activePanel) {
+                case STATS -> 145;
+                case SPELLS -> 85;
+                case SKILLS, UNLOCKS -> 105;
+                default -> 0;
+            };
+            if (event.getMouseX() >= panelX && event.getMouseX() <= panelX + panelWidth &&
+                event.getMouseY() >= panelY && event.getMouseY() <= panelY + 166) {
+                event.setCanceled(true);
+            }
+        }
         if (currentDragged != DraggedButton.NONE && event.getButton() == 0) {
             currentDragged = DraggedButton.NONE;
             OSLConfig.COMMON_SPEC.save(); // Save once drag is finished
@@ -241,6 +283,27 @@ public class InventoryStyleOverlay {
                     case SKILLS -> LevelScreen.renderOverlay(event.getGuiGraphics(), px, py, event.getMouseX(), event.getMouseY());
                     case SPELLS -> SpellScreen.renderOverlay(event.getGuiGraphics(), px, py, event.getMouseX(), event.getMouseY());
                     case UNLOCKS -> SkillUnlocksScreen.renderOverlay(event.getGuiGraphics(), px, py, selectedSkill);
+                }
+                
+                // Re-render the vanilla tooltip if hovering over an inventory item, 
+                // so it doesn't get hidden behind our panels.
+                Slot hovered = null;
+                for (Slot slot : inv.getMenu().slots) {
+                    int slotX = inv.getLeftPos() + slot.x;
+                    int slotY = inv.getTopPos() + slot.y;
+                    if (event.getMouseX() >= slotX && event.getMouseX() < slotX + 16 &&
+                        event.getMouseY() >= slotY && event.getMouseY() < slotY + 16) {
+                        hovered = slot;
+                        break;
+                    }
+                }
+                if (hovered != null && hovered.hasItem()) {
+                    List<Component> tooltipLines = Screen.getTooltipFromItem(Minecraft.getInstance(), hovered.getItem());
+                    List<ClientTooltipComponent> components = tooltipLines.stream()
+                            .map(Component::getVisualOrderText)
+                            .map(ClientTooltipComponent::create)
+                            .collect(java.util.stream.Collectors.toList());
+                    event.getGuiGraphics().tooltip(Minecraft.getInstance().font, components, event.getMouseX(), event.getMouseY(), DefaultTooltipPositioner.INSTANCE, null, hovered.getItem());
                 }
             }
 

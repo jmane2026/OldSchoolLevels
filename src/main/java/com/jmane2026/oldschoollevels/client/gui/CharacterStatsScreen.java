@@ -1,5 +1,10 @@
 package com.jmane2026.oldschoollevels.client.gui;
 
+import java.util.List;
+
+import org.jspecify.annotations.NonNull;
+import org.lwjgl.glfw.GLFW;
+
 import com.jmane2026.oldschoollevels.common.CombatStyle;
 import com.jmane2026.oldschoollevels.common.RequirementUtils;
 import com.jmane2026.oldschoollevels.common.Skill;
@@ -7,23 +12,20 @@ import com.jmane2026.oldschoollevels.common.SkillData;
 import com.jmane2026.oldschoollevels.core.ModAttachments;
 import com.jmane2026.oldschoollevels.network.ChangeStylePayload;
 import com.jmane2026.oldschoollevels.util.ExperienceUtils;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
-import net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner;
-import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
+import net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner;
 import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.attachment.IAttachmentHolder;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
-import org.jspecify.annotations.NonNull;
-import org.lwjgl.glfw.GLFW;
-
-import java.util.List;
 
 public class CharacterStatsScreen extends Screen {
     private static final int WIDTH = 145; // Widened further for full labels
@@ -116,8 +118,30 @@ public class CharacterStatsScreen extends Screen {
         };
     }
 
-    public static void handleOverlayClick(double ignoredMx, double ignoredMy, int ignoredX, int ignoredY) {
-        // Click logic moved to Button widgets in InventoryStyleOverlay
+    public static void handleOverlayClick(double mx, double my, int x, int y) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) return;
+        
+        int styleX = x + 5;
+        int styleY = y + 25;
+        
+        for (CombatStyle style : CombatStyle.values()) {
+            if (mx >= styleX && mx < styleX + 32 && my >= styleY && my < styleY + 11) {
+                mc.player.setData(ModAttachments.COMBAT_STYLE.get(), style);
+                ClientPacketDistributor.sendToServer(new ChangeStylePayload(style));
+                
+                // Refresh screen to update highlights
+                if (mc.screen instanceof net.minecraft.client.gui.screens.inventory.InventoryScreen inv) {
+                    inv.init(inv.width, inv.height);
+                }
+                
+                if (mc.level != null) {
+                    mc.level.playSound(mc.player, mc.player.blockPosition(), net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), net.minecraft.sounds.SoundSource.MASTER, 1.0f, 1.0f);
+                }
+                return;
+            }
+            styleX += 33;
+        }
     }
 
     private static void renderStatOverlay(GuiGraphicsExtractor graphics, Minecraft mc, String label, String value, int x, int y, float scale) {

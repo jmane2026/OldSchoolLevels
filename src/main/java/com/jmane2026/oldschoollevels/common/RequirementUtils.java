@@ -107,14 +107,17 @@ public class RequirementUtils {
     public static int getRequiredRangedLevel(ItemStack stack) {
         String path = BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath();
 
+        // Arrow heads do not require ranged
+        if (path.contains("_heads")) return 1;
+
         // Bow Tiers
+        if (path.contains("dark_oak_bow")) return 60;
+        if (path.contains("pale_oak_bow") || path.contains("cherry_bow")) return 85;
         if (path.contains("oak_bow")) return 1;
         if (path.contains("spruce_bow") || path.contains("birch_bow")) return 15;
         if (path.contains("jungle_bow")) return 30;
         if (path.contains("acacia_bow")) return 45;
-        if (path.contains("dark_oak_bow")) return 60;
         if (path.contains("mangrove_bow")) return 75;
-        if (path.contains("cherry_bow")) return 85;
 
         // Arrow Tiers
         if (path.contains("flint_arrow")) return 1;
@@ -141,13 +144,13 @@ public class RequirementUtils {
         if (path.contains("netherite")) return 85;
 
         // Bows (Log Tiers)
+        if (path.contains("dark_oak")) return 60;
+        if (path.contains("pale_oak") || path.contains("cherry")) return 85;
         if (path.contains("oak")) return 1;
         if (path.contains("spruce") || path.contains("birch")) return 15;
         if (path.contains("jungle")) return 30;
         if (path.contains("acacia")) return 45;
-        if (path.contains("dark_oak")) return 60;
         if (path.contains("mangrove")) return 75;
-        if (path.contains("cherry")) return 85;
 
         return 1;
     }
@@ -204,7 +207,7 @@ public class RequirementUtils {
     }
 
     public static float getBowDamageBonus(String path) {
-        if (path.contains("cherry")) return 3.0f;
+        if (path.contains("cherry") || path.contains("pale_oak")) return 3.0f;
         if (path.contains("mangrove")) return 2.5f;
         if (path.contains("dark_oak")) return 2.0f;
         if (path.contains("acacia")) return 1.5f;
@@ -273,7 +276,8 @@ public class RequirementUtils {
             case DEFENSE -> populateDefenseUnlocks(unlocks);
             case SMITHING -> populateSmithingUnlocks(unlocks);
             case COOKING -> populateCookingUnlocks(unlocks);
-            case FLETCHING, RANGED -> populateArcheryUnlocks(unlocks);
+            case FLETCHING -> populateFletchingUnlocks(unlocks);
+            case RANGED -> populateRangedUnlocks(unlocks);
             case ARCANA -> populateArcanaUnlocks(unlocks);
             case MAGIC -> populateMagicUnlocks(unlocks);
             case MOBILITY -> populateMobilityUnlocks(unlocks);
@@ -281,7 +285,7 @@ public class RequirementUtils {
         return unlocks;
     }
 
-    private static void populateArcheryUnlocks(List<UnlockInfo> unlocks) {
+    private static void populateFletchingUnlocks(List<UnlockInfo> unlocks) {
         unlocks.add(new UnlockInfo(1, "Oak Bows", new ItemStack((ItemLike) ModItems.OAK_BOW)));
         unlocks.add(new UnlockInfo(1, "Flint Arrows", new ItemStack((ItemLike) ModItems.FLINT_ARROW)));
         unlocks.add(new UnlockInfo(1, "Flint Arrow Heads", new ItemStack((ItemLike) ModItems.FLINT_ARROW_HEADS)));
@@ -302,8 +306,28 @@ public class RequirementUtils {
         unlocks.add(new UnlockInfo(65, "Emerald Arrow Heads", new ItemStack((ItemLike) ModItems.EMERALD_ARROW_HEADS)));
         unlocks.add(new UnlockInfo(75, "Mangrove Bows", new ItemStack((ItemLike) ModItems.MANGROVE_BOW)));
         unlocks.add(new UnlockInfo(85, "Cherry Bows", new ItemStack((ItemLike) ModItems.CHERRY_BOW)));
+        unlocks.add(new UnlockInfo(85, "Pale Oak Bows", new ItemStack((ItemLike) ModItems.PALE_OAK_BOW)));
         unlocks.add(new UnlockInfo(85, "Netherite Arrows", new ItemStack((ItemLike) ModItems.NETHERITE_ARROW)));
         unlocks.add(new UnlockInfo(85, "Netherite Arrow Heads", new ItemStack((ItemLike) ModItems.NETHERITE_ARROW_HEADS)));
+    }
+
+    private static void populateRangedUnlocks(List<UnlockInfo> unlocks) {
+        unlocks.add(new UnlockInfo(1, "Oak Bows", new ItemStack((ItemLike) ModItems.OAK_BOW)));
+        unlocks.add(new UnlockInfo(1, "Flint Arrows", new ItemStack((ItemLike) ModItems.FLINT_ARROW)));
+        unlocks.add(new UnlockInfo(5, "Copper Arrows", new ItemStack((ItemLike) ModItems.COPPER_ARROW)));
+        unlocks.add(new UnlockInfo(15, "Spruce Bows", new ItemStack((ItemLike) ModItems.SPRUCE_BOW)));
+        unlocks.add(new UnlockInfo(15, "Birch Bows", new ItemStack((ItemLike) ModItems.BIRCH_BOW)));
+        unlocks.add(new UnlockInfo(15, "Iron Arrows", new ItemStack((ItemLike) ModItems.IRON_ARROW)));
+        unlocks.add(new UnlockInfo(30, "Jungle Bows", new ItemStack((ItemLike) ModItems.JUNGLE_BOW)));
+        unlocks.add(new UnlockInfo(40, "Golden Arrows", new ItemStack((ItemLike) ModItems.GOLDEN_ARROW)));
+        unlocks.add(new UnlockInfo(45, "Acacia Bows", new ItemStack((ItemLike) ModItems.ACACIA_BOW)));
+        unlocks.add(new UnlockInfo(55, "Diamond Arrows", new ItemStack((ItemLike) ModItems.DIAMOND_ARROW)));
+        unlocks.add(new UnlockInfo(60, "Dark Oak Bows", new ItemStack((ItemLike) ModItems.DARK_OAK_BOW)));
+        unlocks.add(new UnlockInfo(65, "Emerald Arrows", new ItemStack((ItemLike) ModItems.EMERALD_ARROW)));
+        unlocks.add(new UnlockInfo(75, "Mangrove Bows", new ItemStack((ItemLike) ModItems.MANGROVE_BOW)));
+        unlocks.add(new UnlockInfo(85, "Cherry Bows", new ItemStack((ItemLike) ModItems.CHERRY_BOW)));
+        unlocks.add(new UnlockInfo(85, "Pale Oak Bows", new ItemStack((ItemLike) ModItems.PALE_OAK_BOW)));
+        unlocks.add(new UnlockInfo(85, "Netherite Arrows", new ItemStack((ItemLike) ModItems.NETHERITE_ARROW)));
     }
 
     private static void populateArcanaUnlocks(List<UnlockInfo> unlocks) {
