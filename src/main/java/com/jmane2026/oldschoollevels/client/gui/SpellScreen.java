@@ -1,36 +1,34 @@
 package com.jmane2026.oldschoollevels.client.gui;
 
-import com.jmane2026.oldschoollevels.common.Spell;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.jspecify.annotations.NonNull;
+import org.lwjgl.glfw.GLFW;
+
 import com.jmane2026.oldschoollevels.common.Skill;
 import com.jmane2026.oldschoollevels.common.SkillData;
+import com.jmane2026.oldschoollevels.common.Spell;
 import com.jmane2026.oldschoollevels.common.items.SigilPouchItem;
 import com.jmane2026.oldschoollevels.core.ModAttachments;
+import com.jmane2026.oldschoollevels.network.SelectSpellPayload;
 import com.jmane2026.oldschoollevels.util.ExperienceUtils;
+
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.inventory.InventoryScreen;
-import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.entity.player.Player;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.neoforge.client.network.ClientPacketDistributor;
-import org.jspecify.annotations.NonNull;
-import org.lwjgl.glfw.GLFW;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-
-import java.util.ArrayList;
-import java.util.List;
-import com.jmane2026.oldschoollevels.network.SelectSpellPayload;
-import java.util.stream.Collectors;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 
 @EventBusSubscriber(value = Dist.CLIENT)
 public class SpellScreen extends Screen {
@@ -177,32 +175,39 @@ public class SpellScreen extends Screen {
         lines.add(Component.literal("Required Magic: " + spell.getRequiredMagicLevel()).withStyle(
                 magicLevel >= spell.getRequiredMagicLevel() ? ChatFormatting.GREEN : ChatFormatting.RED));
 
-        lines.add(Component.empty());
-        lines.add(Component.empty());
-        lines.add((Component.empty()));
-
-        List<ClientTooltipComponent> components = lines.stream()
-                .map(Component::getVisualOrderText)
-                .map(ClientTooltipComponent::create).collect(Collectors.toList());
-
-        // Calculate actual tooltip width to sync with Minecraft's internal flipping logic
-        int tooltipWidth = 0;
-        for (ClientTooltipComponent component : components) {
-            tooltipWidth = Math.max(tooltipWidth, component.getWidth(mc.font));
-        }
-        // Ensure width accounts for the row of sigil icons (35px per icon)
-        tooltipWidth = Math.max(tooltipWidth, spell.getCosts().size() * 35);
+        // Bypass Minecraft's buggy graphics.tooltip() and draw a perfect custom box!
+        int textWidth1 = mc.font.width(spell.getNameComponent());
+        int textWidth2 = mc.font.width("Required Magic: " + spell.getRequiredMagicLevel());
+        int requiredWidth = Math.max(Math.max(textWidth1, textWidth2), spell.getCosts().size() * 35);
 
         // Standard Minecraft tooltip flip logic: if the box exceeds screen width, it renders to the left of the mouse
+        int tooltipWidth = requiredWidth;
         int tooltipX = mouseX + 12;
         if (tooltipX + tooltipWidth > mc.getWindow().getGuiScaledWidth()) {
             tooltipX = mouseX - 16 - tooltipWidth;
         }
 
-        graphics.tooltip(mc.font, components, mouseX, mouseY, DefaultTooltipPositioner.INSTANCE, null);
+        // Push Z-level so it renders above everything else
+        graphics.pose().pushMatrix();
+        graphics.pose().translate(0, 0);
+
+        // Draw custom tooltip background (Black box with Purple border, matching OSRS / Vanilla)
+        int bgX = tooltipX - 4;
+        int bgY = mouseY - 4;
+        int bgW = tooltipWidth + 8;
+        int bgH = 60; // Height for 2 lines of text + sigil icons + quantity text
+
+        graphics.fillGradient(bgX - 1, bgY - 1, bgX + bgW + 1, bgY + bgH + 1, 0xF0100010, 0xF0100010); // Outer black box
+        graphics.fillGradient(bgX, bgY, bgX + bgW, bgY + bgH, 0x505000FF, 0x5028007F); // Inner purple border
+        graphics.fillGradient(bgX + 1, bgY + 1, bgX + bgW - 1, bgY + bgH - 1, 0xF0100010, 0xF0100010); // Inner black background
+
+        // Draw the text manually
+        graphics.text(mc.font, spell.getNameComponent().copy().withStyle(ChatFormatting.GOLD), tooltipX, mouseY, 0xFFFFFFFF, true);
+        graphics.text(mc.font, Component.literal("Required Magic: " + spell.getRequiredMagicLevel()).withStyle(
+                magicLevel >= spell.getRequiredMagicLevel() ? ChatFormatting.GREEN : ChatFormatting.RED), tooltipX, mouseY + 12, 0xFFFFFFFF, true);
 
         int iconX = tooltipX + 5; // Anchor icons to the actual start of the rendered black box
-        int iconY = mouseY + 12;
+        int iconY = mouseY + 24; // Draw below the second line of text (12 + 12)
 
         for (Spell.SpellCost cost : spell.getCosts()) {
             int owned = player.getInventory().countItem(cost.item().get());
@@ -221,6 +226,8 @@ public class SpellScreen extends Screen {
 
             iconX += 35; // Increased spacing to prevent overlapping quantity text
         }
+
+        graphics.pose().popMatrix();
     }
 
     @Override
