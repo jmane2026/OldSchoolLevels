@@ -1,19 +1,13 @@
 package com.jmane2026.oldschoollevels.client.gui;
 
 import com.jmane2026.oldschoollevels.OldSchoolLevels;
+import com.jmane2026.oldschoollevels.client.UILayoutConfig;
 import com.jmane2026.oldschoollevels.common.OSLConfig;
 import com.jmane2026.oldschoollevels.common.Skill;
-import com.jmane2026.oldschoollevels.common.CombatStyle;
-import com.jmane2026.oldschoollevels.core.ModAttachments;
-import com.jmane2026.oldschoollevels.network.ChangeStylePayload;
-import com.mojang.blaze3d.systems.RenderSystem;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.inventory.Slot;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.neoforge.client.event.ContainerScreenEvent;
-import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.Window;
 import net.minecraft.client.Minecraft;
@@ -53,17 +47,17 @@ public class InventoryStyleOverlay {
             // Stats Button
             event.addListener(Button.builder(Component.empty(), (_) -> {
                         if (!isShiftDown()) togglePanel(Panel.STATS);
-                    }).bounds(x + OSLConfig.STATS_BUTTON_X.get(), y + 41 + OSLConfig.STATS_BUTTON_Y.get(), 16, 16).build());
+                    }).bounds(x + UILayoutConfig.get().statsButtonX, y + 41 + UILayoutConfig.get().statsButtonY, 16, 16).build());
 
             // Skills Button
             event.addListener(Button.builder(Component.empty(), (_) -> {
                         if (!isShiftDown()) togglePanel(Panel.SKILLS);
-                    }).bounds(x + OSLConfig.SKILLS_BUTTON_X.get(), y + 23 + OSLConfig.SKILLS_BUTTON_Y.get(), 16, 16).build());
+                    }).bounds(x + UILayoutConfig.get().skillsButtonX, y + 23 + UILayoutConfig.get().skillsButtonY, 16, 16).build());
 
             // Spells Button
             event.addListener(Button.builder(Component.empty(), (_) -> {
                         if (!isShiftDown()) togglePanel(Panel.SPELLS);
-                    }).bounds(x + OSLConfig.SPELLS_BUTTON_X.get(), y + 5 + OSLConfig.SPELLS_BUTTON_Y.get(), 16, 16).build());
+                    }).bounds(x + UILayoutConfig.get().spellsButtonX, y + 5 + UILayoutConfig.get().spellsButtonY, 16, 16).build());
         }
     }
 
@@ -155,12 +149,12 @@ public class InventoryStyleOverlay {
             int x = getBaseX(inv) + 77;
             int y = inv.getTopPos();
 
-            if (isMouseOver(mx, my, x + OSLConfig.STATS_BUTTON_X.get(), y + 43 + OSLConfig.STATS_BUTTON_Y.get())) {
-                grab(mx, my, OSLConfig.STATS_BUTTON_X.get(), OSLConfig.STATS_BUTTON_Y.get(), DraggedButton.STATS);
-            } else if (isMouseOver(mx, my, x + OSLConfig.SKILLS_BUTTON_X.get(), y + 25 + OSLConfig.SKILLS_BUTTON_Y.get())) {
-                grab(mx, my, OSLConfig.SKILLS_BUTTON_X.get(), OSLConfig.SKILLS_BUTTON_Y.get(), DraggedButton.SKILLS);
-            } else if (isMouseOver(mx, my, x + OSLConfig.SPELLS_BUTTON_X.get(), y + 7 + OSLConfig.SPELLS_BUTTON_Y.get())) {
-                grab(mx, my, OSLConfig.SPELLS_BUTTON_X.get(), OSLConfig.SPELLS_BUTTON_Y.get(), DraggedButton.SPELLS);
+            if (isMouseOver(mx, my, x + UILayoutConfig.get().statsButtonX, y + 43 + UILayoutConfig.get().statsButtonY)) {
+                grab(mx, my, UILayoutConfig.get().statsButtonX, UILayoutConfig.get().statsButtonY, DraggedButton.STATS);
+            } else if (isMouseOver(mx, my, x + UILayoutConfig.get().skillsButtonX, y + 25 + UILayoutConfig.get().skillsButtonY)) {
+                grab(mx, my, UILayoutConfig.get().skillsButtonX, UILayoutConfig.get().skillsButtonY, DraggedButton.SKILLS);
+            } else if (isMouseOver(mx, my, x + UILayoutConfig.get().spellsButtonX, y + 7 + UILayoutConfig.get().spellsButtonY)) {
+                grab(mx, my, UILayoutConfig.get().spellsButtonX, UILayoutConfig.get().spellsButtonY, DraggedButton.SPELLS);
             }
         } 
         
@@ -248,9 +242,9 @@ public class InventoryStyleOverlay {
             int newY = startOffsetY + (int) Math.round(event.getMouseY() - startMouseY);
 
             switch (currentDragged) {
-                case STATS -> { OSLConfig.STATS_BUTTON_X.set(newX); OSLConfig.STATS_BUTTON_Y.set(newY); }
-                case SKILLS -> { OSLConfig.SKILLS_BUTTON_X.set(newX); OSLConfig.SKILLS_BUTTON_Y.set(newY); }
-                case SPELLS -> { OSLConfig.SPELLS_BUTTON_X.set(newX); OSLConfig.SPELLS_BUTTON_Y.set(newY); }
+                case STATS -> { UILayoutConfig.get().statsButtonX = newX; UILayoutConfig.get().statsButtonY = newY; UILayoutConfig.save(); }
+                case SKILLS -> { UILayoutConfig.get().skillsButtonX = newX; UILayoutConfig.get().skillsButtonY = newY; UILayoutConfig.save(); }
+                case SPELLS -> { UILayoutConfig.get().spellsButtonX = newX; UILayoutConfig.get().spellsButtonY = newY; UILayoutConfig.save(); }
             }
 
             // Hitbox update
@@ -268,13 +262,13 @@ public class InventoryStyleOverlay {
 
             // Render STATS icon
             event.getGuiGraphics().item(new ItemStack(Items.NETHERITE_HELMET),
-                    x + OSLConfig.STATS_BUTTON_X.get(), y + 41 + OSLConfig.STATS_BUTTON_Y.get());
+                    x + UILayoutConfig.get().statsButtonX, y + 41 + UILayoutConfig.get().statsButtonY);
 
             // Render SKILLS icon
             event.getGuiGraphics().pose().pushMatrix();
             event.getGuiGraphics().pose().translate(
-                    (x + OSLConfig.SKILLS_BUTTON_X.get() + 1.5f),
-                    (y + 23 + OSLConfig.SKILLS_BUTTON_Y.get() + 1.5f),
+                    (x + UILayoutConfig.get().skillsButtonX + 1.5f),
+                    (y + 23 + UILayoutConfig.get().skillsButtonY + 1.5f),
                     event.getGuiGraphics().pose());
             event.getGuiGraphics().pose().scale(0.8f, 0.8f, event.getGuiGraphics().pose());
             event.getGuiGraphics().item(new ItemStack(Items.EXPERIENCE_BOTTLE), 0, 0);
@@ -283,8 +277,8 @@ public class InventoryStyleOverlay {
             // Render SPELLS icon
             event.getGuiGraphics().pose().pushMatrix();
             event.getGuiGraphics().pose().translate(
-                    (float)(x + OSLConfig.SPELLS_BUTTON_X.get() + 2),
-                    (float)(y + 5 + OSLConfig.SPELLS_BUTTON_Y.get() + 2),
+                    (float)(x + UILayoutConfig.get().spellsButtonX + 2),
+                    (float)(y + 5 + UILayoutConfig.get().spellsButtonY + 2),
                     event.getGuiGraphics().pose());
             event.getGuiGraphics().pose().scale(0.75f, 0.75f, event.getGuiGraphics().pose());
             event.getGuiGraphics().item(new ItemStack(Items.ENCHANTED_BOOK), 0, 0);
@@ -322,11 +316,11 @@ public class InventoryStyleOverlay {
             Minecraft mc = Minecraft.getInstance();
             String tooltipText = null;
 
-            if (isMouseOver(event.getMouseX(), event.getMouseY(), bx + OSLConfig.STATS_BUTTON_X.get(), by + 41 + OSLConfig.STATS_BUTTON_Y.get())) {
+            if (isMouseOver(event.getMouseX(), event.getMouseY(), bx + UILayoutConfig.get().statsButtonX, by + 41 + UILayoutConfig.get().statsButtonY)) {
                 tooltipText = "Character Sheet (Shift+Drag to Move)";
-            } else if (isMouseOver(event.getMouseX(), event.getMouseY(), bx + OSLConfig.SKILLS_BUTTON_X.get(), by + 23 + OSLConfig.SKILLS_BUTTON_Y.get())) {
+            } else if (isMouseOver(event.getMouseX(), event.getMouseY(), bx + UILayoutConfig.get().skillsButtonX, by + 23 + UILayoutConfig.get().skillsButtonY)) {
                 tooltipText = "Skills (Shift+Drag to Move)";
-            } else if (isMouseOver(event.getMouseX(), event.getMouseY(), bx + OSLConfig.SPELLS_BUTTON_X.get(), by + 5 + OSLConfig.SPELLS_BUTTON_Y.get())) {
+            } else if (isMouseOver(event.getMouseX(), event.getMouseY(), bx + UILayoutConfig.get().spellsButtonX, by + 5 + UILayoutConfig.get().spellsButtonY)) {
                 tooltipText = "Spellbook (Shift+Drag to Move)";
             }
 

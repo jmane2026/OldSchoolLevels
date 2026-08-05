@@ -8,6 +8,8 @@ import com.jmane2026.oldschoollevels.core.ModAttachments;
 import com.jmane2026.oldschoollevels.core.ModEntities;
 import com.jmane2026.oldschoollevels.core.ModMenus;
 import com.jmane2026.oldschoollevels.util.ExperienceUtils;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.WindChargeRenderer;
@@ -19,10 +21,13 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.*;
+import net.neoforged.neoforge.client.gui.ConfigurationScreen;
+import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 
 @EventBusSubscriber(modid = OldSchoolLevels.MODID, value = Dist.CLIENT)
 public class OldSchoolLevelsClient {
-    public OldSchoolLevelsClient(ModContainer ignoredContainer) {
+    public static void registerConfigScreen(ModContainer container) {
+        container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
     }
 
     @SubscribeEvent
@@ -118,9 +123,9 @@ class ClientGameEvents {
         DamageIndicatorManager.clientTick();
 
         // --- Momentum Preservation (Drag Reduction) ---
-        net.minecraft.client.player.LocalPlayer player = Minecraft.getInstance().player;
+        LocalPlayer player = Minecraft.getInstance().player;
         // Allow momentum retention in the air OR while skimming the surface of water (eyes dry)
-        if (player != null && !player.onGround() && !player.getAbilities().flying && (!player.isInWater() || !player.isEyeInFluid(net.minecraft.tags.FluidTags.WATER))) {
+        if (player != null && !player.onGround() && !player.getAbilities().flying && (!player.isInWater() || !player.isEyeInFluid(FluidTags.WATER))) {
             // Check if we are actually moving horizontally
             if (player.getDeltaMovement().horizontalDistanceSqr() > 0.001) {
                 int level = ExperienceUtils.getLevelAtExperience(player.getData(ModAttachments.SKILLS.get()).getExperience(Skill.MOBILITY));

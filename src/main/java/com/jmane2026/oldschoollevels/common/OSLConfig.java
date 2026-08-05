@@ -18,50 +18,56 @@ public class OSLConfig {
     public static final ModConfigSpec.BooleanValue ENABLE_MINING_SPEED_SCALING;
     public static final ModConfigSpec.BooleanValue ENABLE_WOODCUTTING_SPEED_SCALING;
 
-    public static final ModConfigSpec.IntValue STATS_BUTTON_X;
-    public static final ModConfigSpec.IntValue STATS_BUTTON_Y;
-    public static final ModConfigSpec.IntValue SKILLS_BUTTON_X;
-    public static final ModConfigSpec.IntValue SKILLS_BUTTON_Y;
-    public static final ModConfigSpec.IntValue SPELLS_BUTTON_X;
-    public static final ModConfigSpec.IntValue SPELLS_BUTTON_Y;
+    public static final ModConfigSpec.BooleanValue ENABLE_CLOUD_SYNC;
+    public static final ModConfigSpec.ConfigValue<String> SUPABASE_URL;
+    public static final ModConfigSpec.ConfigValue<String> SUPABASE_API_KEY;
 
     // Client Settings
     public static final ModConfigSpec.BooleanValue ENABLE_ENTITY_HEALTH_BARS;
 
     static {
-        COMMON_BUILDER.push("Mobility Features");
+        COMMON_BUILDER.translation("oldschoollevels.config.category.mobility").push("Mobility Features");
         ENABLE_MOVEMENT_SPEED_SCALING = COMMON_BUILDER.comment("Toggle passive movement speed scaling from Mobility level.")
+                .translation("oldschoollevels.config.enableMovementSpeedScaling")
                 .define("enableMovementSpeedScaling", true);
         ENABLE_JUMP_SCALING = COMMON_BUILDER.comment("Toggle jump height scaling from Mobility level.")
+                .translation("oldschoollevels.config.enableJumpScaling")
                 .define("enableJumpScaling", true);
         ENABLE_WALL_JUMPING = COMMON_BUILDER.comment("Toggle the ability to wall jump at level 60.")
+                .translation("oldschoollevels.config.enableWallJumping")
                 .define("enableWallJumping", true);
         ENABLE_WATER_STRIDING = COMMON_BUILDER.comment("Toggle the ability to water skip at level 80.")
+                .translation("oldschoollevels.config.enableWaterStriding")
                 .define("enableWaterStriding", true);
         ENABLE_SWIM_SPEED_SCALING = COMMON_BUILDER.comment("Toggle passive swim speed scaling from Mobility level.")
+                .translation("oldschoollevels.config.enableSwimSpeedScaling")
                 .define("enableSwimSpeedScaling", true);
         COMMON_BUILDER.pop();
 
-        COMMON_BUILDER.push("Gathering Features");
+        COMMON_BUILDER.translation("oldschoollevels.config.category.gathering").push("Gathering Features");
         ENABLE_MINING_SPEED_SCALING = COMMON_BUILDER.comment("Toggle break speed scaling for Mining.")
+                .translation("oldschoollevels.config.enableMiningSpeedScaling")
                 .define("enableMiningSpeedScaling", true);
         ENABLE_WOODCUTTING_SPEED_SCALING = COMMON_BUILDER.comment("Toggle break speed scaling for Woodcutting.")
+                .translation("oldschoollevels.config.enableWoodcuttingSpeedScaling")
                 .define("enableWoodcuttingSpeedScaling", true);
         COMMON_BUILDER.pop();
 
-        COMMON_BUILDER.push("UI Settings");
-        STATS_BUTTON_X = COMMON_BUILDER.defineInRange("statsButtonX", 0, -1000, 1000);
-        STATS_BUTTON_Y = COMMON_BUILDER.defineInRange("statsButtonY", 0, -1000, 1000);
-
-        SKILLS_BUTTON_X = COMMON_BUILDER.defineInRange("skillsButtonX", 0, -1000, 1000);
-        SKILLS_BUTTON_Y = COMMON_BUILDER.defineInRange("skillsButtonY", 0, -1000, 1000);
-
-        SPELLS_BUTTON_X = COMMON_BUILDER.defineInRange("spellsButtonX", 0, -1000, 1000);
-        SPELLS_BUTTON_Y = COMMON_BUILDER.defineInRange("spellsButtonY", 0, -1000, 1000);
+        COMMON_BUILDER.translation("oldschoollevels.config.category.cloudSync").push("Cloud Sync");
+        ENABLE_CLOUD_SYNC = COMMON_BUILDER.comment("Enable syncing player stats to a Supabase database.")
+                .translation("oldschoollevels.config.enableCloudSync")
+                .define("enableCloudSync", false);
+        SUPABASE_URL = COMMON_BUILDER.comment("The REST URL of the Supabase project.")
+                .translation("oldschoollevels.config.supabaseUrl")
+                .define("supabaseUrl", "https://gbimvviaawgvsxqzyoxr.supabase.co/rest/v1/players");
+        SUPABASE_API_KEY = COMMON_BUILDER.comment("The API Key for Supabase authentication.")
+                .translation("oldschoollevels.config.supabaseApiKey")
+                .define("supabaseApiKey", "sb_publishable_XqNh6YwQsMEBQkiI8-FUuw_3_xAZwo9");
         COMMON_BUILDER.pop();
 
-        CLIENT_BUILDER.push("Visuals");
+        CLIENT_BUILDER.translation("oldschoollevels.config.category.visuals").push("Visuals");
         ENABLE_ENTITY_HEALTH_BARS = CLIENT_BUILDER.comment("Toggle the OSRS-style health bar overlay when targeting mobs.")
+                .translation("oldschoollevels.config.enableEntityHealthBars")
                 .define("enableEntityHealthBars", true);
         CLIENT_BUILDER.pop();
 

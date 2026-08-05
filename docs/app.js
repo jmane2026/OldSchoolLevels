@@ -12,6 +12,7 @@ let allPlayers = [];
 let currentSort = "total";
 let currentSortAsc = false;
 let showingCheaters = false;
+let currentVersion = "all";
 
 // Convert XP to Level using OSRS Formula
 function getLevelAtExperience(xp) {
@@ -75,13 +76,31 @@ function processData(data) {
 
         return {
             ...player,
+            mcVersionDisplay: player.mc_version || "Legacy",
             total: totalLevel,
             totalXp: totalXp
         };
     });
 
+    populateVersionDropdown();
     document.getElementById("loading-state").classList.add("hidden");
     renderLeaderboard();
+}
+
+function populateVersionDropdown() {
+    const versions = new Set(allPlayers.map(p => p.mcVersionDisplay));
+    const dropdown = document.getElementById("version-dropdown");
+    
+    // Clear existing options except "all"
+    dropdown.innerHTML = '<option value="all">Version: All</option>';
+    
+    // Sort versions (roughly)
+    Array.from(versions).sort().reverse().forEach(version => {
+        const option = document.createElement("option");
+        option.value = version;
+        option.innerText = `Version: ${version}`;
+        dropdown.appendChild(option);
+    });
 }
 
 let searchQuery = "";
@@ -103,6 +122,10 @@ function renderLeaderboard() {
 
     // Filter
     let filteredPlayers = allPlayers.filter(p => p.cheater === showingCheaters);
+    
+    if (currentVersion !== "all") {
+        filteredPlayers = filteredPlayers.filter(p => p.mcVersionDisplay === currentVersion);
+    }
     
     if (searchQuery) {
         const query = searchQuery.toLowerCase();
@@ -211,6 +234,11 @@ document.getElementById("theme-dropdown").addEventListener("change", (e) => {
     const theme = e.target.value;
     document.body.className = theme;
     localStorage.setItem("osl-theme", theme);
+});
+
+document.getElementById("version-dropdown").addEventListener("change", (e) => {
+    currentVersion = e.target.value;
+    renderLeaderboard();
 });
 
 document.querySelectorAll(".sortable").forEach(th => {

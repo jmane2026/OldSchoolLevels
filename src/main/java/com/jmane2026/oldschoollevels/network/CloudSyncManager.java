@@ -4,12 +4,16 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.jmane2026.oldschoollevels.OldSchoolLevels;
+import com.jmane2026.oldschoollevels.common.OSLConfig;
 import com.jmane2026.oldschoollevels.common.Skill;
+import com.jmane2026.oldschoollevels.common.SkillAttributeHandler;
 import com.jmane2026.oldschoollevels.common.SkillData;
 import com.jmane2026.oldschoollevels.core.ModAttachments;
+import net.minecraft.SharedConstants;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
@@ -25,27 +29,25 @@ import java.util.UUID;
 public class CloudSyncManager {
 
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final String SUPABASE_URL = "https://gbimvviaawgvsxqzyoxr.supabase.co/rest/v1/players";
-    private static final String API_KEY = "sb_publishable_XqNh6YwQsMEBQkiI8-FUuw_3_xAZwo9";
     private static final HttpClient client = HttpClient.newHttpClient();
 
     @SubscribeEvent
     public static void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player) {
+        if (OSLConfig.ENABLE_CLOUD_SYNC.get() && event.getEntity() instanceof ServerPlayer player) {
             downloadPlayerData(player);
         }
     }
 
     @SubscribeEvent
     public static void onPlayerQuit(PlayerEvent.PlayerLoggedOutEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player) {
+        if (OSLConfig.ENABLE_CLOUD_SYNC.get() && event.getEntity() instanceof ServerPlayer player) {
             uploadPlayerData(player);
         }
     }
 
     @SubscribeEvent
     public static void onPlayerTick(PlayerTickEvent.Post event) {
-        if (event.getEntity() instanceof ServerPlayer player) {
+        if (OSLConfig.ENABLE_CLOUD_SYNC.get() && event.getEntity() instanceof ServerPlayer player) {
             // Upload every 5 minutes (6000 ticks) to prevent data loss on crash
             if (player.tickCount % 6000 == 0) {
                 uploadPlayerData(player);
@@ -58,9 +60,9 @@ public class CloudSyncManager {
         LOGGER.info("[OSL] Requesting cloud data for UUID: " + uuid);
         
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(SUPABASE_URL + "?uuid=eq." + uuid.toString() + "&select=*"))
-                .header("apikey", API_KEY)
-                .header("Authorization", "Bearer " + API_KEY)
+                .uri(URI.create(OSLConfig.SUPABASE_URL.get() + "?uuid=eq." + uuid.toString()))
+                .header("apikey", OSLConfig.SUPABASE_API_KEY.get())
+                .header("Authorization", "Bearer " + OSLConfig.SUPABASE_API_KEY.get())
                 .header("Accept", "application/json")
                 .GET()
                 .build();
@@ -119,7 +121,7 @@ public class CloudSyncManager {
         if (changed) {
             player.setData(ModAttachments.SKILLS.get(), localData);
             player.syncData(ModAttachments.SKILLS.get());
-            com.jmane2026.oldschoollevels.common.SkillAttributeHandler.refreshAttributes(player);
+            SkillAttributeHandler.refreshAttributes(player);
             LOGGER.info("[OSL] Successfully applied and synced cloud data to client.");
         }
     }
@@ -134,6 +136,7 @@ public class CloudSyncManager {
         payload.addProperty("uuid", uuid.toString());
         payload.addProperty("username", username);
         payload.addProperty("cheater", cheater);
+        payload.addProperty("mc_version", SharedConstants.getCurrentVersion().name()); // Works on both client and server
         
         for (Skill skill : Skill.values()) {
             String colName = skill.name().toLowerCase() + "_xp";
@@ -141,9 +144,9 @@ public class CloudSyncManager {
         }
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(SUPABASE_URL))
-                .header("apikey", API_KEY)
-                .header("Authorization", "Bearer " + API_KEY)
+                .uri(URI.create(OSLConfig.SUPABASE_URL.get()))
+                .header("apikey", OSLConfig.SUPABASE_API_KEY.get())
+                .header("Authorization", "Bearer " + OSLConfig.SUPABASE_API_KEY.get())
                 .header("Content-Type", "application/json")
                 .header("Prefer", "resolution=merge-duplicates") // UPSERT behavior
                 .POST(HttpRequest.BodyPublishers.ofString(payload.toString()))
