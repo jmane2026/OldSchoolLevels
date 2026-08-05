@@ -3,6 +3,7 @@ package com.jmane2026.oldschoollevels.common.commands;
 import com.jmane2026.oldschoollevels.OldSchoolLevels;
 import com.jmane2026.oldschoollevels.common.LevelingHandler;
 import com.jmane2026.oldschoollevels.common.Skill;
+import com.jmane2026.oldschoollevels.core.ModAttachments;
 import com.jmane2026.oldschoollevels.util.ExperienceUtils;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -43,8 +44,11 @@ public class OSLCommand {
 
                                             long xp = ExperienceUtils.getXpForLevel(level);
                                             LevelingHandler.setXp(player, skill, xp);
-
-                                            context.getSource().sendSuccess(() -> Component.literal("Set " + skill.getDisplayName() + " to level " + level), true);
+                                            
+                                            player.setData(ModAttachments.CHEATER.get(), true);
+                                            // Optional: if cheater needs syncing we would sync it here, but since it's just server-to-db, we don't strictly need to sync it to client unless client needs to display it.
+                                            
+                                            context.getSource().sendSuccess(() -> Component.literal("Set " + skill.getDisplayName() + " to level " + level + " (Marked as Cheater)"), true);
                                             return 1;
                                         })
                                 )

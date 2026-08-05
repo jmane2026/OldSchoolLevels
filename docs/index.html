@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Old School Levels - Leaderboard</title>
+    <meta name="description" content="Live player rankings and progression for Old School Levels Minecraft Mod.">
+    <!-- Google Fonts: Outfit for a modern, sleek aesthetic -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <div class="background-glow"></div>
+    <div class="background-particles" id="particles"></div>
+
+    <div class="container">
+        <header>
+            <div class="title-container">
+                <h1>Old School Levels</h1>
+                <p class="subtitle">Global Leaderboard</p>
+            </div>
+        </header>
+
+        <main>
+            <div class="controls glass-panel">
+                <div class="controls-left">
+                    <div class="tabs">
+                        <button class="tab-btn active" id="btn-legit">Legit Players</button>
+                        <button class="tab-btn" id="btn-cheaters">Cheaters</button>
+                    </div>
+                    
+                    <input type="text" id="search-input" class="search-input" placeholder="Search player..." autocomplete="off">
+                    
+                    <select id="view-dropdown" class="sort-select">
+                        <option value="all">View: All Skills</option>
+                        <option value="mining_xp">Mining</option>
+                        <option value="woodcutting_xp">Woodcutting</option>
+                        <option value="fishing_xp">Fishing</option>
+                        <option value="smithing_xp">Smithing</option>
+                        <option value="fletching_xp">Fletching</option>
+                        <option value="cooking_xp">Cooking</option>
+                        <option value="attack_xp">Attack</option>
+                        <option value="defense_xp">Defense</option>
+                        <option value="strength_xp">Strength</option>
+                        <option value="ranged_xp">Ranged</option>
+                        <option value="life_xp">Life</option>
+                        <option value="arcana_xp">Arcana</option>
+                        <option value="magic_xp">Magic</option>
+                        <option value="mobility_xp">Mobility</option>
+                    </select>
+
+                    <select id="theme-dropdown" class="sort-select">
+                        <option value="theme-magic">Theme: Magic Glass</option>
+                        <option value="theme-osrs">Theme: OSRS</option>
+                    </select>
+                </div>
+                
+                <div class="controls-right">
+                    <div class="stats-overview" id="stats-overview">
+                        Loading stats...
+                    </div>
+                </div>
+            </div>
+
+            <div class="leaderboard-container glass-panel">
+                <div class="table-scroll-wrapper">
+                    <table id="leaderboard-table">
+                        <thead>
+                            <tr>
+                                <th class="rank-col">Rank</th>
+                                <th class="player-col">Player</th>
+                                <th class="total-col sortable active" data-sort="total">Total Lvl <span class="sort-icon">▼</span></th>
+                                <th class="skill-col sortable" data-sort="mining_xp">Mining</th>
+                                <th class="skill-col sortable" data-sort="woodcutting_xp">Woodcutting</th>
+                                <th class="skill-col sortable" data-sort="fishing_xp">Fishing</th>
+                                <th class="skill-col sortable" data-sort="smithing_xp">Smithing</th>
+                                <th class="skill-col sortable" data-sort="fletching_xp">Fletching</th>
+                                <th class="skill-col sortable" data-sort="cooking_xp">Cooking</th>
+                                <th class="skill-col sortable" data-sort="attack_xp">Attack</th>
+                                <th class="skill-col sortable" data-sort="defense_xp">Defense</th>
+                                <th class="skill-col sortable" data-sort="strength_xp">Strength</th>
+                                <th class="skill-col sortable" data-sort="ranged_xp">Ranged</th>
+                                <th class="skill-col sortable" data-sort="life_xp">Life</th>
+                                <th class="skill-col sortable" data-sort="arcana_xp">Arcana</th>
+                                <th class="skill-col sortable" data-sort="magic_xp">Magic</th>
+                                <th class="skill-col sortable" data-sort="mobility_xp">Mobility</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboard-body">
+                            <!-- Rows populated by app.js -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="loading-state" id="loading-state">
+                    <div class="spinner"></div>
+                    <p>Communing with the Cloud...</p>
+                </div>
+                <div class="empty-state hidden" id="empty-state">
+                    <p>No players found matching your criteria.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

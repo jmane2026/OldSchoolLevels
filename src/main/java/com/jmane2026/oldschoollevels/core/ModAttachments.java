@@ -29,6 +29,14 @@ public class ModAttachments {
                     .build()
     );
 
+    public static final Supplier<AttachmentType<Boolean>> CHEATER = ATTACHMENT_TYPES.register(
+            "cheater",
+            () -> AttachmentType.builder(() -> false)
+                    .serialize(Codec.BOOL.fieldOf("cheater"))
+                    .copyOnDeath()
+                    .build()
+    );
+
     public static final Supplier<AttachmentType<CombatStyle>> COMBAT_STYLE = ATTACHMENT_TYPES.register(
             "combat_style",
             () -> AttachmentType.builder(() -> CombatStyle.ACCURATE)
