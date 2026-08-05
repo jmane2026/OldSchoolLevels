@@ -6,6 +6,7 @@ import com.jmane2026.oldschoollevels.common.Skill;
 import com.jmane2026.oldschoollevels.common.CombatStyle;
 import com.jmane2026.oldschoollevels.core.ModAttachments;
 import com.jmane2026.oldschoollevels.network.ChangeStylePayload;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -100,8 +101,16 @@ public class InventoryStyleOverlay {
         }
     }
 
+    public static boolean isManualTooltipRender = false;
+    public static java.util.List<net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent> capturedTooltip = null;
+    public static int capturedMouseX = 0;
+    public static int capturedMouseY = 0;
+    public static net.minecraft.world.item.ItemStack capturedTooltipStack = net.minecraft.world.item.ItemStack.EMPTY;
+
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onRenderTooltipPre(net.neoforged.neoforge.client.event.RenderTooltipEvent.Pre event) {
+        if (isManualTooltipRender) return;
+
         if (Minecraft.getInstance().screen instanceof InventoryScreen inv && activePanel != Panel.NONE) {
             int panelX = inv.getLeftPos() + 180;
             int panelY = inv.getTopPos();
@@ -112,10 +121,24 @@ public class InventoryStyleOverlay {
                 default -> 0;
             };
 
-            if (event.getX() >= panelX && event.getX() <= panelX + panelWidth &&
-                event.getY() >= panelY && event.getY() <= panelY + 166) {
-                event.setCanceled(true);
+            double mouseX = Minecraft.getInstance().mouseHandler.xpos() * Minecraft.getInstance().getWindow().getGuiScaledWidth() / (double)Minecraft.getInstance().getWindow().getScreenWidth();
+            double mouseY = Minecraft.getInstance().mouseHandler.ypos() * Minecraft.getInstance().getWindow().getGuiScaledHeight() / (double)Minecraft.getInstance().getWindow().getScreenHeight();
+
+            if (mouseX >= panelX && mouseX <= panelX + panelWidth &&
+                mouseY >= panelY && mouseY <= panelY + 166) {
+                // Mouse is over side panel, cancel JEI tooltips completely
+                if (event.getItemStack() != null && !event.getItemStack().isEmpty()) {
+                    event.setCanceled(true); 
+                }
+                return;
             }
+
+            // Capture valid tooltips to render AFTER the side panel
+            capturedTooltip = new java.util.ArrayList<>(event.getComponents());
+            capturedMouseX = (int)mouseX;
+            capturedMouseY = (int)mouseY;
+            capturedTooltipStack = event.getItemStack();
+            event.setCanceled(true);
         }
     }
 
@@ -277,33 +300,19 @@ public class InventoryStyleOverlay {
 
             if (activePanel != Panel.NONE) {
                 // Render the Active Panel Overlay
-                // Because this is 'Post', it renders above JEI and vanilla UI elements
                 switch (activePanel) {
                     case STATS -> CharacterStatsScreen.renderOverlay(event.getGuiGraphics(), px, py, event.getMouseX(), event.getMouseY());
                     case SKILLS -> LevelScreen.renderOverlay(event.getGuiGraphics(), px, py, event.getMouseX(), event.getMouseY());
                     case SPELLS -> SpellScreen.renderOverlay(event.getGuiGraphics(), px, py, event.getMouseX(), event.getMouseY());
                     case UNLOCKS -> SkillUnlocksScreen.renderOverlay(event.getGuiGraphics(), px, py, selectedSkill);
                 }
-                
-                // Re-render the vanilla tooltip if hovering over an inventory item, 
-                // so it doesn't get hidden behind our panels.
-                Slot hovered = null;
-                for (Slot slot : inv.getMenu().slots) {
-                    int slotX = inv.getLeftPos() + slot.x;
-                    int slotY = inv.getTopPos() + slot.y;
-                    if (event.getMouseX() >= slotX && event.getMouseX() < slotX + 16 &&
-                        event.getMouseY() >= slotY && event.getMouseY() < slotY + 16) {
-                        hovered = slot;
-                        break;
-                    }
-                }
-                if (hovered != null && hovered.hasItem()) {
-                    List<Component> tooltipLines = Screen.getTooltipFromItem(Minecraft.getInstance(), hovered.getItem());
-                    List<ClientTooltipComponent> components = tooltipLines.stream()
-                            .map(Component::getVisualOrderText)
-                            .map(ClientTooltipComponent::create)
-                            .collect(java.util.stream.Collectors.toList());
-                    event.getGuiGraphics().tooltip(Minecraft.getInstance().font, components, event.getMouseX(), event.getMouseY(), DefaultTooltipPositioner.INSTANCE, null, hovered.getItem());
+
+                // Draw the captured tooltip ON TOP of the side panel!
+                if (capturedTooltip != null) {
+                    isManualTooltipRender = true;
+                    event.getGuiGraphics().tooltip(Minecraft.getInstance().font, capturedTooltip, capturedMouseX, capturedMouseY, DefaultTooltipPositioner.INSTANCE, null);
+                    isManualTooltipRender = false;
+                    capturedTooltip = null;
                 }
             }
 
