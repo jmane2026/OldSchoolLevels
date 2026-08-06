@@ -682,7 +682,7 @@ public class LevelingHandler {
         if (block == Blocks.NETHER_QUARTZ_ORE) return 50;
         if (block == Blocks.NETHER_GOLD_ORE) return 50;
         if (block == Blocks.ANCIENT_DEBRIS) return 150;
-        if (block == Blocks.STONE || block == Blocks.COBBLESTONE || block == Blocks.DEEPSLATE || block == Blocks.COBBLED_DEEPSLATE) return 1;
+        if (block == Blocks.STONE || block == Blocks.COBBLESTONE || block == Blocks.DEEPSLATE || block == Blocks.COBBLED_DEEPSLATE || block == Blocks.DIORITE || block == Blocks.ANDESITE || block == Blocks.GRANITE || block == Blocks.TUFF) return 1;
         return 0;
     }
 
@@ -702,7 +702,7 @@ public class LevelingHandler {
 
     private static float getMiningSpeedMultiplier(Block block) {
         // Tier 0: Basic stones (2% per level)
-        if (block == Blocks.STONE || block == Blocks.COBBLESTONE || block == Blocks.DEEPSLATE || block == Blocks.COBBLED_DEEPSLATE) return 0.12f;
+        if (block == Blocks.STONE || block == Blocks.COBBLESTONE || block == Blocks.DEEPSLATE || block == Blocks.COBBLED_DEEPSLATE || block == Blocks.DIORITE || block == Blocks.ANDESITE || block == Blocks.GRANITE || block == Blocks.TUFF) return 0.12f;
         
         // Tier 1: Common Ores (Coal, Iron) (1.5% per level)
         if (block == Blocks.COAL_ORE || block == Blocks.DEEPSLATE_COAL_ORE ||

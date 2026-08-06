@@ -15,7 +15,7 @@ import java.util.List;
 public class RequirementUtils {
 
     public static int getRequiredMiningLevel(Block block) {
-        if (block == Blocks.STONE || block == Blocks.COBBLESTONE || block == Blocks.DEEPSLATE || block == Blocks.COBBLED_DEEPSLATE) return 1;
+        if (block == Blocks.STONE || block == Blocks.COBBLESTONE || block == Blocks.DEEPSLATE || block == Blocks.COBBLED_DEEPSLATE || block == Blocks.DIORITE || block == Blocks.ANDESITE || block == Blocks.GRANITE || block == Blocks.TUFF) return 1;
         if (block == Blocks.COAL_ORE || block == Blocks.DEEPSLATE_COAL_ORE || block == ModBlocks.SIGILIC_ORE.get()) return 1;
         if (block == Blocks.COPPER_ORE || block == Blocks.DEEPSLATE_COPPER_ORE) return 5;
         if (block == Blocks.IRON_ORE || block == Blocks.DEEPSLATE_IRON_ORE) return 15;
