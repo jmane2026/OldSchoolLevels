@@ -120,27 +120,14 @@ function renderLeaderboard() {
         }
     });
 
-    // Filter
-    let filteredPlayers = allPlayers.filter(p => p.cheater === showingCheaters);
-    
+    // 1. Filter by Cheater and Version first (since these define the "global" pool of competitors)
+    let globalPool = allPlayers.filter(p => p.cheater === showingCheaters);
     if (currentVersion !== "all") {
-        filteredPlayers = filteredPlayers.filter(p => p.mcVersionDisplay === currentVersion);
-    }
-    
-    if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        filteredPlayers = filteredPlayers.filter(p => p.username && p.username.toLowerCase().includes(query));
+        globalPool = globalPool.filter(p => p.mcVersionDisplay === currentVersion);
     }
 
-    if (filteredPlayers.length === 0) {
-        emptyState.classList.remove("hidden");
-        return;
-    } else {
-        emptyState.classList.add("hidden");
-    }
-
-    // Sort
-    filteredPlayers.sort((a, b) => {
+    // 2. Sort the global pool to determine real ranks
+    globalPool.sort((a, b) => {
         let valA = a[currentSort] || 0;
         let valB = b[currentSort] || 0;
         
@@ -155,23 +142,47 @@ function renderLeaderboard() {
         return 0;
     });
 
+    // Assign global rank based on this sort
+    globalPool.forEach((p, i) => p.currentRank = i + 1);
+
+    // 3. Apply search filter
+    let displayPlayers = globalPool;
+    if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        displayPlayers = displayPlayers.filter(p => p.username && p.username.toLowerCase().includes(query));
+    }
+
+    // 4. Cap at 100 for display
+    displayPlayers = displayPlayers.slice(0, 100);
+
+    if (displayPlayers.length === 0) {
+        emptyState.classList.remove("hidden");
+        document.getElementById("stats-overview").innerText = "No players found";
+        return;
+    } else {
+        emptyState.classList.add("hidden");
+    }
+
     // Update Overview
-    const playerText = filteredPlayers.length === 1 ? 'Player' : 'Players';
-    document.getElementById("stats-overview").innerText = 
-        `Showing ${filteredPlayers.length} ${showingCheaters ? 'Cheater' : 'Legit'} ${playerText}`;
+    const playerText = displayPlayers.length === 1 ? 'Player' : 'Players';
+    if (searchQuery) {
+        document.getElementById("stats-overview").innerText = `Showing ${displayPlayers.length} search results`;
+    } else {
+        document.getElementById("stats-overview").innerText = `Showing Top ${displayPlayers.length} ${showingCheaters ? 'Cheater' : 'Legit'} ${playerText}`;
+    }
 
     // Render
-    filteredPlayers.forEach((player, index) => {
+    displayPlayers.forEach((player) => {
         const tr = document.createElement("tr");
         
         // Rank formatting
         let rankClass = "";
-        if (index === 0) rankClass = "rank-1";
-        else if (index === 1) rankClass = "rank-2";
-        else if (index === 2) rankClass = "rank-3";
+        if (player.currentRank === 1) rankClass = "rank-1";
+        else if (player.currentRank === 2) rankClass = "rank-2";
+        else if (player.currentRank === 3) rankClass = "rank-3";
 
         let html = `
-            <td class="rank-col ${rankClass}">#${index + 1}</td>
+            <td class="rank-col ${rankClass}">#${player.currentRank}</td>
             <td class="player-col">${player.username}</td>
             <td class="total-col">${player.total.toLocaleString()}</td>
         `;
