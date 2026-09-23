@@ -64,9 +64,16 @@ public class XpNotificationOverlay {
         Minecraft mc = Minecraft.getInstance();
         int screenHeight = mc.getWindow().getGuiScaledHeight();
         
-        // POSITIONING: Bottom Left, stacking upwards
+        // --- FINE TUNING ---
+        // Adjust this variable to manually scale the entire XP popup.
+        // 1.0f is default size, 0.75f is 25% smaller, 0.5f is half size, etc.
+        float scaleFactor = 0.75f;
+        
+        // Adjust this variable to shift the popup left or right.
         int startX = 10;
-        int y = screenHeight - 40;
+        // -------------------
+
+        int y = screenHeight - (int)(40 * scaleFactor);
 
         for (XpTicket ticket : ACTIVE_NOTIFICATIONS) {
             // Calculate Alpha for a smooth fade out in the last 10 ticks
@@ -86,63 +93,61 @@ public class XpNotificationOverlay {
             if (lvl >= 99) progress = 1.0f;
 
             graphics.pose().pushMatrix();
+            
+            // Apply Translation and Scaling
+            graphics.pose().translate(startX, y);
+            graphics.pose().scale(scaleFactor, scaleFactor);
 
             // 0. Define Box Dimensions
-            int boxWidth = 120;
+            int boxWidth = 140;
             int boxHeight = 30;
             int bgColor = ((int)(fade * 140) << 24); // Semi-transparent black
-            // Draw Background Box (Fixing absolute coordinate overflow)
-            graphics.fill(startX, y, startX + boxWidth, y + boxHeight, bgColor);
-            graphics.outline(startX, y, boxWidth, boxHeight, (alpha << 24));
+            // Draw Background Box
+            graphics.fill(0, 0, boxWidth, boxHeight, bgColor);
+            graphics.outline(0, 0, boxWidth, boxHeight, (alpha << 24));
 
             // 1. Draw Icon
             if (ticket.skill.getSpriteIcon() != null) {
                 if (ticket.skill == Skill.MAGIC) {
-                    // Manual color calculation for alpha fade on raw texture
                     int tint = (alpha << 24) | 0xFFFFFF;
-                    
-                    // Calculate the current animation frame (0-31)
                     long time = mc.level != null ? mc.level.getGameTime() : 0;
                     int frameIndex = (int) ((time / 2) % 32);
                     int vOffset = frameIndex * 16;
-
-                    graphics.blit(RenderPipelines.GUI_TEXTURED, ticket.skill.getSpriteIcon(), startX + 2, y + 2, 0, vOffset, 16, 16, 16, 16, 16, 512, tint);
+                    graphics.blit(RenderPipelines.GUI_TEXTURED, ticket.skill.getSpriteIcon(), 2, 2, 0, vOffset, 16, 16, 16, 16, 16, 512, tint);
                 } else {
-                    graphics.blitSprite(RenderPipelines.GUI_TEXTURED_PREMULTIPLIED_ALPHA, ticket.skill.getSpriteIcon(), startX + 2, y + 2, 16, 16, fade);
+                    graphics.blitSprite(RenderPipelines.GUI_TEXTURED_PREMULTIPLIED_ALPHA, ticket.skill.getSpriteIcon(), 2, 2, 16, 16, fade);
                 }
             } else {
-                graphics.item(ticket.skill.getIcon(), startX + 2, y + 2);
+                // Item rendering might ignore pose translations on older mappings, but modern GuiGraphics typically respects it.
+                graphics.item(ticket.skill.getIcon(), 2, 2);
             }
 
             // 2. Draw Skill Name (Top Left)
             String title = ticket.skill.getDisplayName();
-            graphics.text(mc.font, title, startX + 22, y + 4, white);
+            graphics.text(mc.font, title, 22, 4, white);
 
             // 3. Draw Level (Top Right)
             String lvlText = "Lvl: " + lvl;
             int lvlWidth = mc.font.width(lvlText);
-            graphics.text(mc.font, lvlText, startX + boxWidth - lvlWidth - 4, y + 4, white);
+            graphics.text(mc.font, lvlText, boxWidth - lvlWidth - 4, 4, white);
 
             // 4. Draw XP Amount (Middle - Yellow)
             String xpText = "+" + ticket.amount + "xp";
-            graphics.text(mc.font, xpText, startX + 22, y + 13, yellow);
+            graphics.text(mc.font, xpText, 22, 13, yellow);
 
             // 5. Draw Progress Bar (Bottom - leaving 1px space from border)
             int barWidth = boxWidth - 26;
-            int barX = startX + 22;
-            int barY = y + 24; // Lowered to leave space
+            int barX = 22;
+            int barY = 24; 
             
-            // Background
             graphics.fill(barX, barY, barX + barWidth, barY + 3, gray);
-            // Progress
             graphics.fill(barX, barY, barX + (int)(barWidth * progress), barY + 3, barGreen);
-            // Outline
             graphics.outline(barX - 1, barY - 1, barWidth + 2, 5, (alpha << 24));
 
-            // Move Y up for the next notification in the stack (Box height + gap)
-            y -= (boxHeight + 4);
-
             graphics.pose().popMatrix();
+
+            // Move Y up for the next notification in the stack (Scaled Gap)
+            y -= (int)((boxHeight + 4) * scaleFactor);
         }
     }
 }

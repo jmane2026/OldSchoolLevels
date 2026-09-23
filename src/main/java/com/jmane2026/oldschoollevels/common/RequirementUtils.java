@@ -3,6 +3,8 @@ package com.jmane2026.oldschoollevels.common;
 import com.jmane2026.oldschoollevels.core.ModBlocks;
 import com.jmane2026.oldschoollevels.core.ModItems;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ItemLike;
@@ -11,10 +13,16 @@ import net.minecraft.world.level.block.Blocks;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class RequirementUtils {
 
     public static int getRequiredMiningLevel(Block block) {
+        MiningStat customStat = MiningStatsManager.getStat(block);
+        if (customStat != null && customStat.required_level() > 0) {
+            return customStat.required_level();
+        }
+
         if (block == Blocks.STONE || block == Blocks.COBBLESTONE || block == Blocks.DEEPSLATE || block == Blocks.COBBLED_DEEPSLATE || block == Blocks.DIORITE || block == Blocks.ANDESITE || block == Blocks.GRANITE || block == Blocks.TUFF) return 1;
         if (block == Blocks.COAL_ORE || block == Blocks.DEEPSLATE_COAL_ORE || block == ModBlocks.SIGILIC_ORE.get()) return 1;
         if (block == Blocks.COPPER_ORE || block == Blocks.DEEPSLATE_COPPER_ORE) return 5;
@@ -27,12 +35,20 @@ public class RequirementUtils {
     }
 
     public static int getRequiredWoodcuttingLevel(Block block) {
-        if (block == Blocks.SPRUCE_LOG || block == Blocks.SPRUCE_WOOD || block == Blocks.BIRCH_LOG || block == Blocks.BIRCH_WOOD) return 15;
-        if (block == Blocks.JUNGLE_LOG || block == Blocks.JUNGLE_WOOD) return 30;
-        if (block == Blocks.ACACIA_LOG || block == Blocks.ACACIA_WOOD) return 45;
-        if (block == Blocks.DARK_OAK_LOG || block == Blocks.DARK_OAK_WOOD) return 60;
-        if (block == Blocks.MANGROVE_LOG || block == Blocks.MANGROVE_WOOD) return 70;
-        if (block == Blocks.CHERRY_LOG || block == Blocks.CHERRY_WOOD || block == Blocks.PALE_OAK_LOG || block == Blocks.PALE_OAK_WOOD) return 85;
+        WoodcuttingStat customStat = WoodcuttingStatsManager.getStat(block);
+        if (customStat != null && customStat.required_level() > 0) {
+            return customStat.required_level();
+        }
+
+        if (block.defaultBlockState().is(BlockTags.LOGS)) {
+            if (block == Blocks.OAK_LOG || block == Blocks.OAK_WOOD || block == Blocks.DARK_OAK_LOG || block == Blocks.DARK_OAK_WOOD) return 1;
+            if (block == Blocks.BIRCH_LOG || block == Blocks.BIRCH_WOOD || block == Blocks.SPRUCE_LOG || block == Blocks.SPRUCE_WOOD) return 15;
+            if (block == Blocks.JUNGLE_LOG || block == Blocks.JUNGLE_WOOD) return 35;
+            if (block == Blocks.ACACIA_LOG || block == Blocks.ACACIA_WOOD) return 50;
+            if (block == Blocks.MANGROVE_LOG || block == Blocks.MANGROVE_WOOD || block == Blocks.CHERRY_LOG || block == Blocks.CHERRY_WOOD) return 60;
+            if (block == Blocks.CRIMSON_STEM || block == Blocks.CRIMSON_HYPHAE || block == Blocks.WARPED_STEM || block == Blocks.WARPED_HYPHAE) return 75;
+            return 1;
+        }
         return 1;
     }
 
@@ -63,6 +79,11 @@ public class RequirementUtils {
     }
 
     public static int getRequiredSmithingLevel(ItemStack stack) {
+        SmithingStat customStat = SmithingStatsManager.getStat(stack.getItem());
+        if (customStat != null && customStat.required_level() > 0) {
+            return customStat.required_level();
+        }
+
         String path = BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath();
 
         // Check both the Result (Ingots) and the Inputs (Raw Ores)
@@ -282,6 +303,10 @@ public class RequirementUtils {
             case MAGIC -> populateMagicUnlocks(unlocks);
             case MOBILITY -> populateMobilityUnlocks(unlocks);
         }
+        
+        // Sort by level ascending
+        unlocks.sort(java.util.Comparator.comparingInt(UnlockInfo::level));
+        
         return unlocks;
     }
 
@@ -364,16 +389,31 @@ public class RequirementUtils {
         unlocks.add(new UnlockInfo(40, "Gold & Quartz", new ItemStack(Items.RAW_GOLD)));
         unlocks.add(new UnlockInfo(65, "Diamond & Emerald", new ItemStack(Items.DIAMOND)));
         unlocks.add(new UnlockInfo(85, "Ancient Debris", new ItemStack(Items.ANCIENT_DEBRIS)));
+
+        for (Map.Entry<Block, MiningStat> entry : MiningStatsManager.getAllStats().entrySet()) {
+            MiningStat stat = entry.getValue();
+            if (stat.required_level() > 0) {
+                String name = entry.getKey().getName().getString();
+                unlocks.add(new UnlockInfo(stat.required_level(), name, new ItemStack(entry.getKey())));
+            }
+        }
     }
 
     private static void populateWoodcuttingUnlocks(List<UnlockInfo> unlocks) {
-        unlocks.add(new UnlockInfo(1, "Oak Trees", new ItemStack(Blocks.OAK_LOG)));
-        unlocks.add(new UnlockInfo(15, "Spruce & Birch", new ItemStack(Blocks.SPRUCE_LOG)));
-        unlocks.add(new UnlockInfo(30, "Jungle Trees", new ItemStack(Blocks.JUNGLE_LOG)));
-        unlocks.add(new UnlockInfo(45, "Acacia Trees", new ItemStack(Blocks.ACACIA_LOG)));
-        unlocks.add(new UnlockInfo(60, "Dark Oak Trees", new ItemStack(Blocks.DARK_OAK_LOG)));
-        unlocks.add(new UnlockInfo(75, "Mangrove Trees", new ItemStack(Blocks.MANGROVE_LOG)));
-        unlocks.add(new UnlockInfo(85, "Cherry & Pale Oak", new ItemStack(Blocks.PALE_OAK_LOG)));
+        unlocks.add(new UnlockInfo(1, "Oak & Dark Oak", new ItemStack(Items.OAK_LOG)));
+        unlocks.add(new UnlockInfo(15, "Birch & Spruce", new ItemStack(Items.BIRCH_LOG)));
+        unlocks.add(new UnlockInfo(35, "Jungle Logs", new ItemStack(Items.JUNGLE_LOG)));
+        unlocks.add(new UnlockInfo(50, "Acacia Logs", new ItemStack(Items.ACACIA_LOG)));
+        unlocks.add(new UnlockInfo(60, "Mangrove & Cherry", new ItemStack(Items.MANGROVE_LOG)));
+        unlocks.add(new UnlockInfo(75, "Nether Stems", new ItemStack(Items.CRIMSON_STEM)));
+
+        for (java.util.Map.Entry<Block, WoodcuttingStat> entry : WoodcuttingStatsManager.getAllStats().entrySet()) {
+            WoodcuttingStat stat = entry.getValue();
+            if (stat.required_level() > 0) {
+                String name = entry.getKey().getName().getString();
+                unlocks.add(new UnlockInfo(stat.required_level(), name, new ItemStack(entry.getKey())));
+            }
+        }
     }
 
     private static void populateFishingUnlocks(List<UnlockInfo> unlocks) {
@@ -410,6 +450,14 @@ public class RequirementUtils {
         unlocks.add(new UnlockInfo(30, "Iron Smithing", new ItemStack(Items.IRON_CHESTPLATE)));
         unlocks.add(new UnlockInfo(40, "Gold Smelting/Smithing", new ItemStack(Items.GOLD_INGOT)));
         unlocks.add(new UnlockInfo(85, "Netherite Smithing", new ItemStack(Items.NETHERITE_SCRAP)));
+
+        for (Map.Entry<Item, SmithingStat> entry : SmithingStatsManager.getAllStats().entrySet()) {
+            SmithingStat stat = entry.getValue();
+            if (stat.required_level() > 0) {
+                String name = new ItemStack(entry.getKey()).getHoverName().getString();
+                unlocks.add(new UnlockInfo(stat.required_level(), name, new ItemStack(entry.getKey())));
+            }
+        }
     }
 
     private static void populateCookingUnlocks(List<UnlockInfo> unlocks) {

@@ -349,7 +349,8 @@ public class RestrictionHandler {
                     }
 
                     menu.broadcastChanges();
-                    PacketDistributor.sendToPlayer(player, new WarningPayload("Requires Level " + Math.max(reqSmith, reqCook)));
+                    String skillName = reqSmith > reqCook ? " Smithing" : " Cooking";
+                    PacketDistributor.sendToPlayer(player, new WarningPayload("Requires Level " + Math.max(reqSmith, reqCook) + skillName));
                     return;
                 }
             }

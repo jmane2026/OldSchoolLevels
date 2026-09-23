@@ -581,7 +581,10 @@ public class LevelingHandler {
                 awardXp(player, Skill.COOKING, getFoodXp(item) * count);
             }
             
-            if (isMetalGear(item)) {
+            SmithingStat customSmithing = SmithingStatsManager.getStat(item.getItem());
+            if (customSmithing != null && customSmithing.xp_gained() > 0) {
+                awardXp(player, Skill.SMITHING, customSmithing.xp_gained() * count);
+            } else if (isMetalGear(item)) {
                 awardXp(player, Skill.SMITHING, getGearSmithingXp(path) * count);
             }
         }
@@ -660,6 +663,11 @@ public class LevelingHandler {
     }
 
     private static long getSmithingXp(ItemStack stack) {
+        SmithingStat customStat = SmithingStatsManager.getStat(stack.getItem());
+        if (customStat != null && customStat.xp_gained() > 0) {
+            return customStat.xp_gained();
+        }
+
         if (stack.is(ModItems.BLANK_SIGIL.get())) return 5L;
         if (stack.is(Items.COPPER_INGOT)) return 15L;
         if (stack.is(Items.IRON_INGOT)) return 25L;
@@ -670,6 +678,11 @@ public class LevelingHandler {
     }
 
     private static long getMiningXp(Block block) {
+        MiningStat customStat = MiningStatsManager.getStat(block);
+        if (customStat != null && customStat.xp_gained() > 0) {
+            return customStat.xp_gained();
+        }
+
         if (block == ModBlocks.SIGILIC_ORE.get()) return 5;
         if (block == Blocks.COAL_ORE || block == Blocks.DEEPSLATE_COAL_ORE) return 17;
         if (block == Blocks.IRON_ORE || block == Blocks.DEEPSLATE_IRON_ORE) return 35;
@@ -687,6 +700,11 @@ public class LevelingHandler {
     }
 
     private static long getWoodcuttingXp(Block block) {
+        WoodcuttingStat customStat = WoodcuttingStatsManager.getStat(block);
+        if (customStat != null && customStat.xp_gained() > 0) {
+            return customStat.xp_gained();
+        }
+
         if (block == Blocks.OAK_LOG || block == Blocks.OAK_WOOD) return 37;
         if (block == Blocks.SPRUCE_LOG || block == Blocks.SPRUCE_WOOD) return 45;
         if (block == Blocks.BIRCH_LOG || block == Blocks.BIRCH_WOOD) return 45;

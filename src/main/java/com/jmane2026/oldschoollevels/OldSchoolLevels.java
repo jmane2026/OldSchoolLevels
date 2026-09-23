@@ -1,6 +1,8 @@
 package com.jmane2026.oldschoollevels;
 
+import com.jmane2026.oldschoollevels.common.MiningStatsManager;
 import com.jmane2026.oldschoollevels.common.OSLConfig;
+import com.jmane2026.oldschoollevels.common.SmithingStatsManager;
 import com.jmane2026.oldschoollevels.common.entities.GiantBossHandler;
 import com.jmane2026.oldschoollevels.core.*;
 import net.minecraft.world.item.CreativeModeTabs;
@@ -8,12 +10,14 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.config.ModConfig;
+import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 
 @Mod(OldSchoolLevels.MODID)
 public class OldSchoolLevels {
     public static final String MODID = "oldschoollevels";
+    public static final org.slf4j.Logger LOGGER = com.mojang.logging.LogUtils.getLogger();
 
     public OldSchoolLevels(IEventBus modEventBus, ModContainer container) {
         ModBlocks.BLOCKS.register(modEventBus);
@@ -32,6 +36,16 @@ public class OldSchoolLevels {
         if (FMLEnvironment.getDist().isClient()) {
             OldSchoolLevelsClient.registerConfigScreen(container);
         }
+
+        modEventBus.addListener(this::commonSetup);
+    }
+
+    private void commonSetup(final net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent event) {
+        event.enqueueWork(() -> {
+            com.jmane2026.oldschoollevels.common.MiningStatsManager.load();
+            com.jmane2026.oldschoollevels.common.SmithingStatsManager.load();
+            com.jmane2026.oldschoollevels.common.WoodcuttingStatsManager.load();
+        });
     }
 
     private void addCreative(BuildCreativeModeTabContentsEvent event) {

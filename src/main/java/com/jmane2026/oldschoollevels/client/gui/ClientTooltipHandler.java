@@ -94,9 +94,25 @@ public class ClientTooltipHandler {
         }
 
         // 4. Processing Requirements
-        boolean isMetalMaterial = path.contains("raw_") || path.contains("_ore") || path.contains("_ingot") || path.contains("scrap") || path.contains("_heads");
-        if (isMetalMaterial) {
-            addRequirement(reqLines, "Smithing", RequirementUtils.getRequiredSmithingLevel(stack), Skill.SMITHING, data);
+        int smithReq = RequirementUtils.getRequiredSmithingLevel(stack);
+        if (smithReq > 1) {
+            boolean isGear = path.contains("sword") || path.contains("pickaxe") || path.contains("axe") || path.contains("shovel") || path.contains("hoe") || path.contains("helmet") || path.contains("chestplate") || path.contains("leggings") || path.contains("boots") || path.contains("spear");
+            if (!isGear) {
+                addRequirement(reqLines, "Smithing", smithReq, Skill.SMITHING, data);
+            }
+        }
+
+        // 5. Block Breaking (Mining/Woodcutting) Requirements
+        if (stack.getItem() instanceof net.minecraft.world.item.BlockItem blockItem) {
+            net.minecraft.world.level.block.Block block = blockItem.getBlock();
+            int miningReq = RequirementUtils.getRequiredMiningLevel(block);
+            if (miningReq > 1) {
+                addRequirement(reqLines, "Mining", miningReq, Skill.MINING, data);
+            }
+            int wcReq = RequirementUtils.getRequiredWoodcuttingLevel(block);
+            if (wcReq > 1) {
+                addRequirement(reqLines, "Woodcutting", wcReq, Skill.WOODCUTTING, data);
+            }
         }
 
         int cookReq = RequirementUtils.getRequiredCookingLevel(stack);
