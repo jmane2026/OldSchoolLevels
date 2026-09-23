@@ -238,6 +238,11 @@ public class RequirementUtils {
     }
 
     public static int getRequiredCookingLevel(ItemStack stack) {
+        CookingStat customStat = CookingStatsManager.getStat(stack.getItem());
+        if (customStat != null && customStat.required_level() > 0) {
+            return customStat.required_level();
+        }
+
         // Check both Inputs and Results
         if (stack.is(Items.BEEF) || stack.is(Items.COOKED_BEEF) ||
                 stack.is(Items.PORKCHOP) || stack.is(Items.COOKED_PORKCHOP) ||
@@ -463,8 +468,18 @@ public class RequirementUtils {
     private static void populateCookingUnlocks(List<UnlockInfo> unlocks) {
         unlocks.add(new UnlockInfo(1, "Beef, Pork & Mutton", new ItemStack(Items.COOKED_BEEF)));
         unlocks.add(new UnlockInfo(25, "Salmon & Chicken", new ItemStack(Items.COOKED_SALMON)));
-        unlocks.add(new UnlockInfo(40, "Pie & Stews", new ItemStack(Items.PUMPKIN_PIE)));
-        unlocks.add(new UnlockInfo(55, "Cake & Rabbit Stew", new ItemStack(Items.CAKE)));
+        unlocks.add(new UnlockInfo(40, "Stews & Pies", new ItemStack(Items.MUSHROOM_STEW)));
+        unlocks.add(new UnlockInfo(55, "Cake & Cod", new ItemStack(Items.CAKE)));
+
+        for (java.util.Map.Entry<net.minecraft.world.item.Item, CookingStat> entry : CookingStatsManager.getAllStats().entrySet()) {
+            CookingStat stat = entry.getValue();
+            if (stat.required_level() > 0) {
+                String name = entry.getKey().getName(new ItemStack(entry.getKey())).getString();
+                unlocks.add(new UnlockInfo(stat.required_level(), name, new ItemStack(entry.getKey())));
+            }
+        }
+        
+        unlocks.sort(java.util.Comparator.comparingInt(UnlockInfo::level));
     }
 
     private static void populateMobilityUnlocks(List<UnlockInfo> unlocks) {

@@ -760,6 +760,11 @@ public class LevelingHandler {
     }
 
     private static long getFoodXp(ItemStack stack) {
+        CookingStat customStat = CookingStatsManager.getStat(stack.getItem());
+        if (customStat != null && customStat.xp_gained() > 0) {
+            return customStat.xp_gained();
+        }
+
         if (stack.is(Items.BREAD)) return 25;
         if (stack.is(Items.PUMPKIN_PIE)) return 40;
         if (stack.is(Items.CAKE)) return 100;
@@ -774,6 +779,8 @@ public class LevelingHandler {
     }
 
     private static boolean isFood(ItemStack stack) {
+        if (CookingStatsManager.getStat(stack.getItem()) != null) return true;
+
         return stack.is(Items.BREAD) || 
                 stack.is(Items.COOKED_BEEF) || stack.is(Items.COOKED_CHICKEN) ||
                 stack.is(Items.COOKED_PORKCHOP) || stack.is(Items.COOKED_MUTTON) ||

@@ -45,6 +45,7 @@ public class OldSchoolLevels {
             com.jmane2026.oldschoollevels.common.MiningStatsManager.load();
             com.jmane2026.oldschoollevels.common.SmithingStatsManager.load();
             com.jmane2026.oldschoollevels.common.WoodcuttingStatsManager.load();
+            com.jmane2026.oldschoollevels.common.CookingStatsManager.load();
         });
     }
 
